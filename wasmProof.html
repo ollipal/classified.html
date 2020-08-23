@@ -1,0 +1,43 @@
+//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>
+const htmlTop = "//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>";
+const htmlBottom = "<\/script></body></html>";
+
+if (typeof window === "undefined") {
+  const fs = require("fs");
+  const path = require("path");
+  const os = require("os");
+
+  const filename = path.basename(__filename);
+  const tmpPath = path.join(os.tmpdir(), filename);
+
+  // copy file to tmp file, and rename
+  fs.readFile(__filename, "utf8", function (err, data) {
+    if (err) throw err;
+    // data processing here
+    fs.writeFile(tmpPath, data, function (err) {
+      if (err) throw err;
+      fs.rename(tmpPath, __filename, (err) => {
+        if (err) throw err;
+        console.log("saved!");
+      });
+    });
+  });
+} else {
+  const filename = location.href.split("/").slice(-1);
+  const source = htmlTop + document.currentScript.innerHTML + htmlBottom;
+
+  window.addEventListener("DOMContentLoaded", () => {
+    document.body.childNodes[0].textContent = ""; // remove the first '//' required for cli excecution
+    document.title = filename; // set document title based on the file name
+  });
+
+  // add button to load source
+  const button = document.createElement("a");
+  button.innerHTML = "Download source";
+  button.href = URL.createObjectURL(
+    new Blob([source], { type: "data:text/plain" })
+  );
+  button.download = filename;
+  document.body.appendChild(button);
+}
+//</script></body></html>
