@@ -1,20 +1,48 @@
 //<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>
-const htmlTop = "//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>";
-const htmlBottom = "<\/script></body></html>";
 
-if (typeof window === "undefined") {
+let data = `
+VGVzdCBkYXRh
+`// data end
+
+const encrypt = (data) => {
+  // base-64, placeholder
+  if (typeof window === "undefined"){
+    return Buffer.from(data, 'utf8').toString('base64');
+  } else {
+    return window.btoa(data);
+  }
+}
+
+const decrypt = (data) => {
+  // base-64 reverted, placeholder
+  if (typeof window === "undefined"){
+    return Buffer.from(data, 'base64').toString('utf8');
+  } else {
+    return window.atob(data);
+  }
+}
+
+const updateSourceData = (source, data) => {
+  // remove the old data and insert new
+  const sourceStart = source.split("let data" + " = `")[0] + "let data" + " = `\n";
+  const sourceEnd = "\n`// data" + " end" + source.split("`// data" + " end")[1];
+  return sourceStart + encrypt(data) + sourceEnd;
+}
+
+if (typeof window === "undefined") { // executed in Node.js
   const fs = require("fs");
   const path = require("path");
   const os = require("os");
 
   const filename = path.basename(__filename);
   const tmpPath = path.join(os.tmpdir(), filename);
+  const newData = process.argv.slice(2).join(" ");
 
   // copy file to tmp file, and rename
-  fs.readFile(__filename, "utf8", function (err, data) {
+  fs.readFile(__filename, "utf8", (err, source) => {
     if (err) throw err;
-    // data processing here
-    fs.writeFile(tmpPath, data, function (err) {
+    const updatedSource = updateSourceData(source, decrypt(data) + newData);
+    fs.writeFile(tmpPath, updatedSource, (err) => {
       if (err) throw err;
       fs.rename(tmpPath, __filename, (err) => {
         if (err) throw err;
@@ -22,7 +50,9 @@ if (typeof window === "undefined") {
       });
     });
   });
-} else {
+} else { // executed in Browser
+  const htmlTop = "//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>";
+  const htmlBottom = "<\/script></body></html>";
   const filename = location.href.split("/").slice(-1);
   const source = htmlTop + document.currentScript.innerHTML + htmlBottom;
 
@@ -31,13 +61,28 @@ if (typeof window === "undefined") {
     document.title = filename; // set document title based on the file name
   });
 
+  // add text field with data
+  let input = document.createElement("input");
+  input.type = "text";
+  input.value = decrypt(data);
+  document.body.appendChild(input);
+
+  // newline
+  document.write ("<br>");
+
   // add button to load source
   const button = document.createElement("a");
   button.innerHTML = "Download source";
-  button.href = URL.createObjectURL(
-    new Blob([source], { type: "data:text/plain" })
-  );
-  button.download = filename;
+  const onClick = () => {
+    button.href = URL.createObjectURL(
+      new Blob(
+        [updateSourceData(source, input.value)],
+        { type: "data:text/plain" }
+      )
+    );
+    button.download = filename;
+  }
+  button.onclick = onClick;
   document.body.appendChild(button);
 }
 //</script></body></html>
