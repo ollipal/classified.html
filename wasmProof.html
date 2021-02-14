@@ -13,12 +13,16 @@ const encrypt = (data) => {
   }
 }
 
-const decrypt = (data) => {
+const decrypt = (data, password) => {
+  if (password !== "1234") {
+    return [false, null]
+  }
+
   // base-64 reverted, placeholder
   if (typeof window === "undefined"){
-    return Buffer.from(data, 'base64').toString('utf8');
+    return [true, Buffer.from(data, 'base64').toString('utf8')];
   } else {
-    return window.atob(data);
+    return [true, window.atob(data)];
   }
 }
 
@@ -36,20 +40,26 @@ if (typeof window === "undefined") { // executed in Node.js
 
   const filename = path.basename(__filename);
   const tmpPath = path.join(os.tmpdir(), filename);
-  const newData = process.argv.slice(2).join(" ");
+  const password = process.argv[2]
+  const newData = process.argv.slice(3).join(" ");
 
-  // copy file to tmp file, and rename
-  fs.readFile(__filename, "utf8", (err, source) => {
-    if (err) throw err;
-    const updatedSource = updateSourceData(source, decrypt(data) + newData);
-    fs.writeFile(tmpPath, updatedSource, (err) => {
+  const [passwordCorrect, decryptedData] = decrypt(data, password);
+  if (!passwordCorrect) {
+    console.log("Incorrect password");
+  } else {
+    // copy file to tmp file, and rename
+    fs.readFile(__filename, "utf8", (err, source) => {
       if (err) throw err;
-      fs.rename(tmpPath, __filename, (err) => {
+      const updatedSource = updateSourceData(source, decryptedData + newData);
+      fs.writeFile(tmpPath, updatedSource, (err) => {
         if (err) throw err;
-        console.log("saved!");
+        fs.rename(tmpPath, __filename, (err) => {
+          if (err) throw err;
+          console.log("saved!");
+        });
       });
     });
-  });
+  }
 } else { // executed in Browser
   const htmlTop = "//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>";
   const htmlBottom = "<\/script></body></html>";
@@ -61,28 +71,48 @@ if (typeof window === "undefined") { // executed in Node.js
     document.title = filename; // set document title based on the file name
   });
 
-  // add text field with data
-  let input = document.createElement("input");
-  input.type = "text";
-  input.value = decrypt(data);
-  document.body.appendChild(input);
-
-  // newline
-  document.write ("<br>");
+  // add text field for the password
+  let passwordInput = document.createElement("input");
+  passwordInput.type = "text";
+  document.body.appendChild(passwordInput);
 
   // add button to load source
-  const button = document.createElement("a");
-  button.innerHTML = "Download source";
-  const onClick = () => {
-    button.href = URL.createObjectURL(
-      new Blob(
-        [updateSourceData(source, input.value)],
-        { type: "data:text/plain" }
-      )
-    );
-    button.download = filename;
+  const decryptButton = document.createElement("a");
+  decryptButton.innerHTML = "Decrypt";
+  const onClickDecrypt = (event) => {
+    event.preventDefault();
+    const [passwordCorrect, decryptedData] = decrypt(data, passwordInput.value);
+
+    if (!passwordCorrect){
+      alert("Incorrect password");
+      return;
+    }
+
+    // add text field for the data
+    let dataInput = document.createElement("input");
+    dataInput.type = "text";
+    dataInput.value = decryptedData;
+    document.body.appendChild(dataInput);
+
+    // add button to downlaod source
+    const downloadButton = document.createElement("a");
+    downloadButton.innerHTML = "Download source";
+    const onClickDownload = (event) => {
+      downloadButton.href = URL.createObjectURL(
+        new Blob(
+          [updateSourceData(source, dataInput.value)],
+          { type: "data:text/plain" }
+        )
+      );
+      downloadButton.download = filename;
+    }
+    downloadButton.onclick = onClickDownload;
+    document.body.appendChild(downloadButton);
   }
-  button.onclick = onClick;
-  document.body.appendChild(button);
+  decryptButton.onclick = onClickDecrypt;
+  document.body.appendChild(decryptButton);
+
+  //newline
+  document.write ("<br>");
 }
 //</script></body></html>
