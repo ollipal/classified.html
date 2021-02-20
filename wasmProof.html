@@ -1,10 +1,40 @@
 //<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>
 
 let data = `
-VGVzdCBkYXRh
+salt:45-0-163-173-182-173-4-108-67-169-175-106-168-58-112-35
+iv:97-103-15-53-120-127-143-63-62-249-110-63
+data:
+w4TDjwLDkGTDmkTDiA/Dk8OUQcKbw6ImCMKqw6h5eMOAw4DCucKsTg==
 `// data end
 
-const encrypt = (data) => {
+const inBrowser = () => typeof window !== 'undefined';
+
+const checkNodeVersionSupported = () => {
+  const NODE_VERSION = process.versions.node;
+  if (NODE_VERSION.split('.')[0] < 15) {
+    throw new Error(`Uses Web Crypto API, Node 15 or higher required (current ${NODE_VERSION})`);
+  }
+};
+
+// set variables based on the execution environment
+let subtle;
+let getRandomValues;
+const utf8Encoder = new TextEncoder('utf-8');
+const DATA_LINE_LEN = 100;
+if (inBrowser()) {
+  subtle = window.crypto.subtle;
+  getRandomValues = window.crypto.getRandomValues;
+} else {
+  checkNodeVersionSupported();
+  const crypto = require('crypto');
+  subtle = crypto.webcrypto.subtle;
+  getRandomValues = (buffer) => {
+    buffer.set(crypto.randomBytes(buffer.length));
+    return buffer;
+  };
+}
+
+const encryptOld = (data) => {
   // base-64, placeholder
   if (typeof window === "undefined"){
     return Buffer.from(data, 'utf8').toString('base64');
@@ -13,7 +43,7 @@ const encrypt = (data) => {
   }
 }
 
-const decrypt = (data, password) => {
+const decryptOld = (data, password) => {
   if (password !== "1234") {
     return [false, null]
   }
@@ -26,11 +56,120 @@ const decrypt = (data, password) => {
   }
 }
 
+/*
+First derive key material from password and salt,
+then use keymaterial and salt to derive an AES-GCM key using PBKDF2.
+*/
+const getKey = async (password, salt) => {
+  const keyMaterial = await subtle.importKey(
+    'raw',
+    utf8Encoder.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey']
+  );
+
+  return subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+};
+
+const toLines = (str) => {
+  const numLines = Math.ceil(str.length / DATA_LINE_LEN);
+  const lines = new Array(numLines);
+  for (let i = 0, start = 0; i < numLines; ++i, start += DATA_LINE_LEN) {
+    lines[i] = str.substr(start, DATA_LINE_LEN);
+  }
+  return lines.join('\n');
+};
+
+const arrayBufferToBase64 = (buf) => (
+  Buffer.from(String.fromCharCode(...new Uint8Array(buf)), 'utf-8').toString('base64')
+);
+
+const base64ToArrayBuffer = (data) => (
+  Uint8Array.from([...Buffer.from(data, 'base64').toString('utf-8')].map(ch => ch.charCodeAt())).buffer
+);
+
+const encryptionValuesToStrorableSring = (salt, iv, encrypted) => (
+  `salt:${salt.join('-')}\niv:${iv.join('-')}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}`
+);
+
+const encryptionValuesFromStroredSring = (str) => {
+  const lines = str.split(/\r?\n|\r/g);
+  const salt = new Uint8Array(lines[1].replace('salt:', '').split('-'));
+  const iv = new Uint8Array(lines[2].replace('iv:', '').split('-'));
+  const data = lines.splice(4).join('');
+  return { salt, iv, data };
+};
+
+/*
+Derive a key from a password supplied by the user, and use the key
+to encrypt the message.
+Return a storable string that contains salt, initialization vector and the
+encrypted data encoded with base64.
+*/
+const encrypt = async (password, message) => {
+  const salt = getRandomValues(new Uint8Array(16));
+  const iv = getRandomValues(new Uint8Array(12));
+  const key = await getKey(password, salt);
+
+  const encrypted = await subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv
+    },
+    key,
+    utf8Encoder.encode(message)
+  );
+
+  return encryptionValuesToStrorableSring(salt, iv, encrypted);
+};
+
+/*
+Derive a key from a password supplied by the user, and use the key
+to decrypt the ciphertext.
+If the ciphertext was decrypted successfully,
+update the "decryptedValue" box with the decrypted value.
+If there was an error decrypting,
+update the "decryptedValue" box with an error message.
+*/
+const decrypt = async (password, data) => {
+  const parsedData = encryptionValuesFromStroredSring(data);
+  const key = await getKey(password, parsedData.salt);
+  try {
+    const decrypted = await subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv: parsedData.iv
+      },
+      key,
+      base64ToArrayBuffer(parsedData.data)
+    );
+
+    const dec = new TextDecoder('utf-8', { fatal: true });
+    return { data:dec.decode(decrypted), success: true };
+  } catch (e) {
+    console.log('*** Decryption error ***');
+    console.log(e);
+    return { data:'', success: false };
+  }
+};
+
 const updateSourceData = (source, data) => {
   // remove the old data and insert new
   const sourceStart = source.split("let data" + " = `")[0] + "let data" + " = `\n";
   const sourceEnd = "\n`// data" + " end" + source.split("`// data" + " end")[1];
-  return sourceStart + encrypt(data) + sourceEnd;
+  return sourceStart + data + sourceEnd;
 }
 
 if (typeof window === "undefined") { // executed in Node.js
@@ -43,23 +182,29 @@ if (typeof window === "undefined") { // executed in Node.js
   const password = process.argv[2]
   const newData = process.argv.slice(3).join(" ");
 
-  const [passwordCorrect, decryptedData] = decrypt(data, password);
-  if (!passwordCorrect) {
-    console.log("Incorrect password");
-  } else {
-    // copy file to tmp file, and rename
-    fs.readFile(__filename, "utf8", (err, source) => {
-      if (err) throw err;
-      const updatedSource = updateSourceData(source, decryptedData + newData);
-      fs.writeFile(tmpPath, updatedSource, (err) => {
+  (async () => {
+    console.log(data)
+    decryptionResult = await decrypt(password, data);
+    if (!decryptionResult.success) {
+      console.log("Incorrect password");
+    } else {
+      console.log(decryptionResult.data);
+      // copy file to tmp file, and rename
+      const updatedData = await encrypt(password, decryptionResult.data + newData)
+      fs.readFile(__filename, "utf8", (err, source) => {
         if (err) throw err;
-        fs.rename(tmpPath, __filename, (err) => {
+        const updatedSource = updateSourceData(source, updatedData);
+        fs.writeFile(tmpPath, updatedSource, (err) => {
           if (err) throw err;
-          console.log("saved!");
+          fs.rename(tmpPath, __filename, (err) => {
+            if (err) throw err;
+            console.log("saved!");
+          });
         });
       });
-    });
-  }
+    }
+  })();
+
 } else { // executed in Browser
   const htmlTop = "//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>";
   const htmlBottom = "<\/script></body></html>";
