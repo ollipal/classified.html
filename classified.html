@@ -1,6 +1,6 @@
 //<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>
 /*
-wasmProof.html
+classied.html
 
 MIT License
 
@@ -27,10 +27,10 @@ SOFTWARE.
 
 
 const data = `
-salt:149-179-193-27-5-131-210-96-148-84-159-81-50-94-8-123
-iv:40-93-208-184-250-43-35-252-121-249-8-109
+salt:51-231-23-26-140-35-137-124-244-101-176-105-42-161-46-140
+iv:202-193-152-50-189-102-124-22-47-74-248-43
 data:
-pG+fj2xnlKWS94GZfPQNwoM/JWjA3RTJcw==
+Yq30olWyBZxXnT7E7ubaMr+DsZlbCCNeKQ==
 `;// data end
 
 /*
@@ -351,8 +351,8 @@ const decrypt = async (password, data) => {
 
 const updateSourceData = (source, data) => {
   // remove the old data and insert new
-  const sourceStart = source.split('const data' + ' = `')[0] + 'const data' + ' = `\n';
-  const sourceEnd = '\n`;// data' + ' end' + source.split('`;// data' + ' end')[1];
+  const sourceStart = source.split('let data' + ' = `')[0] + 'let data' + ' = `\n';
+  const sourceEnd = '\n`// data' + ' end' + source.split('`// data' + ' end')[1];
   return sourceStart + data + sourceEnd;
 };
 

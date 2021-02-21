@@ -1,5 +1,5 @@
 /*
-Run this file to generate new wasmProof.html file
+Run this file to generate new classified.html file
 */
 
 const { header, footer, getIntro } = require('./misc');
@@ -18,7 +18,7 @@ ${getIntro(license)}
 ${base64js}
 ${body}
 ${footer}`);
-const filePath = path.join(__dirname, '..', 'wasmProof.html');
+const filePath = path.join(__dirname, '..', 'classified.html');
 
 // write file
 fs.writeFileSync(filePath, fileContents, 'utf8');

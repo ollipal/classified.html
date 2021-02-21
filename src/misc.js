@@ -6,16 +6,16 @@ const header = "//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></h
 const footer = '//</script></body></html>';
 const getIntro = (license) => (
 `/*
-wasmProof.html
+classied.html
 
 ${license}*/
 
 
 const data = \`
-salt:222-14-77-28-195-123-191-143-174-73-57-136-63-177-209-247
-iv:124-246-101-57-175-99-139-26-227-238-43-9
+salt:51-231-23-26-140-35-137-124-244-101-176-105-42-161-46-140
+iv:202-193-152-50-189-102-124-22-47-74-248-43
 data:
-vA08YQ+fvdXJ79ywhB7FiFJMOQ45k1BuC/lOjAw3
+Yq30olWyBZxXnT7E7ubaMr+DsZlbCCNeKQ==
 \`;// data end
 `
 );
