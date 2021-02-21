@@ -1,0 +1,19 @@
+{
+    "env": {
+        "browser": true,
+        "commonjs": true,
+        "es2021": true
+    },
+    "extends": [
+        "standard"
+    ],
+    "parserOptions": {
+        "ecmaVersion": 12
+    },
+    "ignorePatterns": ["base64-js.js"],
+    "rules": {
+        "semi": [2, "always"],
+        "no-undef": "off", // base64-js.js in a saparate file
+        "no-useless-escape": "off" // body.js's htmlBottom requires this
+    }
+}
