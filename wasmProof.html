@@ -1,10 +1,10 @@
 //<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>
 
 let data = `
-salt:26-175-223-168-44-220-157-99-247-146-68-134-14-156-76-151
-iv:255-81-32-92-115-9-15-255-4-215-116-250
+salt:209-38-63-141-109-86-82-124-111-192-20-37-47-20-76-149
+iv:134-181-57-65-31-95-34-156-10-212-37-132
 data:
-kmsgV1/t2Ms8FOI4LNeJGzQslDO1YqAd48jN
+qm+m4NZAHa2TTA5IlTDOhlcMRct47vTYIw==
 `// data end
 
 /*
@@ -341,13 +341,22 @@ if (typeof window === "undefined") { // executed in Node.js
   const newData = process.argv.slice(3).join(" ");
 
   (async () => {
+    if (password === undefined){
+      console.log("No password supplied");
+      return
+    }
     decryptionResult = await decrypt(password, data);
     if (!decryptionResult.success) {
       console.log("Incorrect password");
-    } else {
-      console.log(decryptionResult.data);
+      return
+    }
+
+    if (newData){
+      // if new data
       // copy file to tmp file, and rename
-      const updatedData = await encrypt(password, decryptionResult.data + " " + newData)
+      const data = decryptionResult.data + " " + newData;
+      console.log(data);
+      const updatedData = await encrypt(password, data);
       fs.readFile(__filename, "utf8", (err, source) => {
         if (err) throw err;
         const updatedSource = updateSourceData(source, updatedData);
@@ -359,6 +368,9 @@ if (typeof window === "undefined") { // executed in Node.js
           });
         });
       });
+    }else{
+      // else just log the data
+      console.log(decryptionResult.data);
     }
   })();
 
