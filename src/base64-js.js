@@ -2,7 +2,7 @@
  * Below is base64-js's index.js from: https://github.com/beatgammit/base64-js/blob/master/index.js
  * This library allows consistent base64 encoding between browsers and Node.js
  * 2021-02-20, commit 88957c9943c7e2a0f03cdf73e71d579e433627d3
- * Modifications: exports have been commented out
+ * Modifications: this comment, and the comment at the end, exports have been commented out
 
 The MIT License (MIT)
 
