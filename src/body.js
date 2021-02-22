@@ -3,7 +3,8 @@ const inBrowser = () => typeof window !== 'undefined';
 const checkNodeVersionSupported = () => {
   const NODE_VERSION = process.versions.node;
   if (NODE_VERSION.split('.')[0] < 15) {
-    throw new Error(`Uses Web Crypto API, Node 15 or higher required (current ${NODE_VERSION})`);
+    console.log(`Uses Web Crypto API, Node 15 or higher required (current ${NODE_VERSION})`);
+    process.exit(1);
   }
 };
 
