@@ -293,51 +293,101 @@ if (typeof window === 'undefined') { // executed in Node.js
     document.title = filename; // set document title based on the file name
   });
 
-  // add text field for the password
-  const passwordInput = document.createElement('input');
-  passwordInput.type = 'text';
-  document.body.appendChild(passwordInput);
+  const showDecrypted = (password, decryptedData) => {
+    // add text field for the data
+    const dataInput = document.createElement('input');
+    dataInput.type = 'text';
+    dataInput.value = decryptedData;
+    document.body.appendChild(dataInput);
 
-  // add button to load source
-  const decryptButton = document.createElement('a');
-  decryptButton.innerHTML = 'Decrypt';
-  const onClickDecrypt = async (event) => {
-    event.preventDefault();
-    const password = passwordInput.value;
-    const decryptionResult = await decrypt(password, data);
-    if (!decryptionResult.success) {
-      alert('Incorrect password');
-    } else {
-      // add text field for the data
-      const dataInput = document.createElement('input');
-      dataInput.type = 'text';
-      dataInput.value = decryptionResult.data;
-      document.body.appendChild(dataInput);
-
-      // add button to downlaod source
-      const downloadButton = document.createElement('a');
-      downloadButton.innerHTML = 'Download source';
-      const onClickDownload = async (event) => {
-        const tmpButton = document.createElement('a');
-        const updatedData = await encrypt(password, dataInput.value);
-        tmpButton.href = URL.createObjectURL(
-          new Blob(
-            [updateSourceData(source, updatedData)],
-            { type: 'data:text/plain' }
-          )
-        );
-        tmpButton.download = filename;
-        tmpButton.click();
-        console.log('clicked');
-        // downloadButton.click();
-      };
-      downloadButton.onclick = onClickDownload;
-      document.body.appendChild(downloadButton);
-    }
+    // add button to downlaod source
+    const downloadButton = document.createElement('a');
+    downloadButton.innerHTML = 'Download source';
+    const onClickDownload = async (event) => {
+      const tmpButton = document.createElement('a');
+      const updatedData = await encrypt(password, dataInput.value);
+      tmpButton.href = URL.createObjectURL(
+        new Blob(
+          [updateSourceData(source, updatedData)],
+          { type: 'data:text/plain' }
+        )
+      );
+      tmpButton.download = filename;
+      tmpButton.click();
+      console.log('clicked');
+      // downloadButton.click();
+    };
+    downloadButton.onclick = onClickDownload;
+    document.body.appendChild(downloadButton);
   };
-  decryptButton.onclick = onClickDecrypt;
-  document.body.appendChild(decryptButton);
 
+  console.log('here');
+  if (dataEmpty()) {
+    console.log('in data empty');
+
+    // add text field for picking password
+    const passwordInput = document.createElement('input');
+    passwordInput.type = 'text';
+    passwordInput.placeholder = 'pick a password';
+    document.body.appendChild(passwordInput);
+
+    // newline
+    document.write('<br>');
+
+    const repasswordInput = document.createElement('input');
+    repasswordInput.type = 'text';
+    repasswordInput.placeholder = 're-enter password';
+    document.body.appendChild(repasswordInput);
+
+    // newline
+    document.write('<br>');
+
+    const onClickDecrypt = async (event) => {
+      event.preventDefault();
+      const password = passwordInput.value;
+      const repassword = repasswordInput.value;
+      if (password === '') {
+        alert('cannot be empty');
+      } else if (password !== repassword) {
+        alert('passwords did not match, please try again');
+        passwordInput.value = '';
+        repasswordInput.value = '';
+      } else {
+        await showDecrypted(password, '');
+      }
+    };
+
+    // add button to load source
+    const decryptButton = document.createElement('a');
+    decryptButton.innerHTML = 'Decrypt';
+    decryptButton.onclick = onClickDecrypt;
+    document.body.appendChild(decryptButton);
+  } else {
+    console.log('data not empty');
+    // add text field for the password
+    const passwordInput = document.createElement('input');
+    passwordInput.type = 'text';
+    document.body.appendChild(passwordInput);
+
+    // newline
+    document.write('<br>');
+
+    // add button to load source
+    const decryptButton = document.createElement('a');
+    decryptButton.innerHTML = 'Decrypt';
+    const onClickDecrypt = async (event) => {
+      event.preventDefault();
+      const password = passwordInput.value;
+      const decryptionResult = await decrypt(password, data);
+      if (!decryptionResult.success) {
+        alert('Incorrect password');
+      } else {
+        showDecrypted(password, decryptionResult.data);
+      }
+    };
+    decryptButton.onclick = onClickDecrypt;
+    document.body.appendChild(decryptButton);
+  };
   // newline
   document.write('<br>');
 }
