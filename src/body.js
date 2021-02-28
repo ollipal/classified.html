@@ -247,18 +247,27 @@ if (typeof window === 'undefined') { // executed in Node.js
       decryptedData = decryptionResult.data;
     }
 
-    console.log('\x1b[36m%s\x1b[0m', 'Text'); // cyan color
-    if (decryptedData !== '') {
-      console.log(decryptedData);
-    };
-    let newNewData;
     let newData = '';
+    let newNewData;
+
+    const printConstents = () => {
+      console.clear();
+      console.log('\x1b[36m%s\x1b[0m', 'Text'); // cyan color
+      console.log(decryptedData + newData);
+    };
+
     while (true) {
+      printConstents();
       newNewData = await question('enter new data (empty to skip): ');
       if (newNewData === '') {
+        console.clear();
         break;
       };
       newData += newNewData + '\n';
+      console.log('\x1b[36m%s\x1b[0m', 'Text'); // cyan color
+      if (decryptedData !== '') {
+        console.log(decryptedData);
+      };
       console.log(newData);
     }
 
@@ -276,7 +285,8 @@ if (typeof window === 'undefined') { // executed in Node.js
           if (err) throw err;
           fs.rename(tmpPath, __filename, (err) => {
             if (err) throw err;
-            console.log('saved!');
+            console.clear();
+            console.log('changes saved!');
           });
         });
       });
