@@ -295,8 +295,7 @@ if (typeof window === 'undefined') { // executed in Node.js
 
   const showDecrypted = (password, decryptedData) => {
     // add text field for the data
-    const dataInput = document.createElement('input');
-    dataInput.type = 'text';
+    const dataInput = document.createElement('textarea');
     dataInput.value = decryptedData;
     document.body.appendChild(dataInput);
 
