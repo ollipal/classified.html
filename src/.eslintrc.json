@@ -14,6 +14,7 @@
     "rules": {
         "semi": [2, "always"],
         "no-undef": "off", // base64-js.js in a saparate file
-        "no-useless-escape": "off" // body.js's htmlBottom requires this
+        "no-useless-escape": "off", // body.js's htmlBottom requires this
+        "no-unmodified-loop-condition": "off" // getSecret needs this
     }
 }

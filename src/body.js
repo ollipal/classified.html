@@ -8,6 +8,8 @@ const checkNodeVersionSupported = () => {
   }
 };
 
+const dataEmpty = () => data === '\n';
+
 // set variables based on the execution environment
 let subtle;
 let getRandomValues;
@@ -25,6 +27,66 @@ if (inBrowser()) {
     return buffer;
   };
 }
+
+// from: https://github.com/ollipal/minimal-password-prompt
+const captureStdin = (onData) => {
+  process.stdin.setEncoding('utf-8');
+  process.stdin.setRawMode(true);
+  process.stdin.on('data', onData);
+  process.stdin.resume();
+};
+
+const releaseStdin = (onData) => {
+  process.stdin.pause();
+  process.stdin.removeListener('data', onData);
+  process.stdin.setRawMode(false);
+  process.stdout.write('\n');
+};
+
+const prompt = (question, ctrlcExits = true) => (
+  new Promise((resolve, reject) => {
+    let input = '';
+    const onData = (data) => {
+      switch (data) {
+        case '\u000A': // \n
+        case '\u000D': // \r
+        case '\u0004': // Ctrl+D
+          releaseStdin(onData);
+          resolve(input);
+          break;
+        case '\u0003': // Ctrl+C
+          releaseStdin(onData);
+          ctrlcExits // exit or raise error
+            ? process.exit()
+            : reject(new Error('Ctrl+C'));
+          break;
+        case '\u0008': // Backspace
+        case '\u007F': // Delete
+          input = input.slice(0, -1);
+          break;
+        default: // any other
+          input += data;
+      };
+    };
+    captureStdin(onData);
+    process.stdout.write(question);
+  })
+);
+
+const pickPassword = async () => {
+  let password, repassword;
+  while (true) {
+    password = await prompt('pick a password: ');
+    repassword = await prompt('re-enter password: ');
+    if (password === '') {
+      console.log('cannot be empty');
+      continue;
+    }
+    if (password === repassword) break;
+    console.log('passwords did not match, please try again:');
+  }
+  return password;
+};
 
 /*
 First derive key material from password and salt,
@@ -79,6 +141,13 @@ const encryptionValuesFromStroredSring = (str) => {
 };
 
 /*
+Placeholder to always home some data to enctrypt.
+This because on node decrypt seems to fail if there
+is no data to return (v15.9.0)
+*/
+const placeholder = 'classified.html\n';
+
+/*
 Derive a key from a password supplied by the user, and use the key
 to encrypt the message.
 Return a storable string that contains salt, initialization vector and the
@@ -95,7 +164,7 @@ const encrypt = async (password, message) => {
       iv
     },
     key,
-    utf8Encoder.encode(message)
+    utf8Encoder.encode(placeholder + message)
   );
 
   return encryptionValuesToStrorableSring(salt, iv, encrypted);
@@ -112,6 +181,7 @@ update the "decryptedValue" box with an error message.
 const decrypt = async (password, data) => {
   const parsedData = encryptionValuesFromStroredSring(data);
   const key = await getKey(password, parsedData.salt);
+
   try {
     const decrypted = await subtle.decrypt(
       {
@@ -123,18 +193,17 @@ const decrypt = async (password, data) => {
     );
 
     const dec = new TextDecoder('utf-8', { fatal: true });
-    return { data: dec.decode(decrypted), success: true };
+    const message = dec.decode(decrypted).slice(placeholder.length);
+    return { data: message, success: true };
   } catch (e) {
-    console.log('*** Decryption error ***');
-    console.log(e);
     return { data: '', success: false };
   }
 };
 
 const updateSourceData = (source, data) => {
   // remove the old data and insert new
-  const sourceStart = source.split('let data' + ' = `')[0] + 'let data' + ' = `\n';
-  const sourceEnd = '\n`// data' + ' end' + source.split('`// data' + ' end')[1];
+  const sourceStart = source.split('const data' + ' = `')[0] + 'const data' + ' = `\n';
+  const sourceEnd = '\n\`;// ' + 'data end' + source.split('\`;// ' + 'data end')[1];
   return sourceStart + data + sourceEnd;
 };
 
@@ -142,29 +211,64 @@ if (typeof window === 'undefined') { // executed in Node.js
   const fs = require('fs');
   const path = require('path');
   const os = require('os');
+  const readline = require('readline');
+
+  const question = (q) => new Promise(resolve => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    rl.question(q, (a) => {
+      rl.close();
+      resolve(a);
+    });
+  });
 
   const filename = path.basename(__filename);
   const tmpPath = path.join(os.tmpdir(), filename);
-  const password = process.argv[2];
-  const newData = process.argv.slice(3).join(' ');
 
   (async () => {
-    if (password === undefined) {
-      console.log('No password supplied');
-      return;
-    }
-    const decryptionResult = await decrypt(password, data);
-    if (!decryptionResult.success) {
-      console.log('Incorrect password');
-      return;
+    let password, decryptedData;
+    if (dataEmpty()) {
+      password = await pickPassword();
+      decryptedData = '';
+    } else if (password === undefined) {
+      let decryptionResult;
+      while (true) {
+        password = await prompt('enter password: ');
+        if (password === '') {
+          console.log('cannot be empty');
+          continue;
+        }
+        decryptionResult = await decrypt(password, data);
+        if (decryptionResult.success) break;
+        console.log('incorrect password');
+      }
+      decryptedData = decryptionResult.data;
     }
 
-    if (newData) {
+    console.log('\x1b[36m%s\x1b[0m', 'Text'); // cyan color
+    if (decryptedData !== '') {
+      console.log(decryptedData);
+    };
+    let newNewData;
+    let newData = '';
+    while (true) {
+      newNewData = await question('enter new data (empty to skip): ');
+      if (newNewData === '') {
+        break;
+      };
+      newData += newNewData + '\n';
+      console.log(newData);
+    }
+
+    if (newData !== '' || decryptedData === '') { // TODO do not re-enrypt if just reopening empty file
       // if new data
       // copy file to tmp file, and rename
-      const data = decryptionResult.data + ' ' + newData;
-      console.log(data);
-      const updatedData = await encrypt(password, data);
+      const datas = decryptedData + newData;
+      console.log('datas');
+      console.log(datas);
+      const updatedData = await encrypt(password, datas);
       fs.readFile(__filename, 'utf8', (err, source) => {
         if (err) throw err;
         const updatedSource = updateSourceData(source, updatedData);
@@ -176,9 +280,6 @@ if (typeof window === 'undefined') { // executed in Node.js
           });
         });
       });
-    } else {
-      // else just log the data
-      console.log(decryptionResult.data);
     }
   })();
 } else { // executed in Browser
