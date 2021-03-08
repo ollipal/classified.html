@@ -252,7 +252,6 @@ if (typeof window === 'undefined') { // executed in Node.js
 
     const printConstents = () => {
       console.clear();
-      console.log('\x1b[36m%s\x1b[0m', 'Text'); // cyan color
       console.log(decryptedData + newData);
     };
 
@@ -264,7 +263,6 @@ if (typeof window === 'undefined') { // executed in Node.js
         break;
       };
       newData += newNewData + '\n';
-      console.log('\x1b[36m%s\x1b[0m', 'Text'); // cyan color
       if (decryptedData !== '') {
         console.log(decryptedData);
       };
