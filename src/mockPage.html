@@ -181,28 +181,36 @@ body {
 </head>
 
 <body>
-  <div id="form-div">
-    <h2>classified.html</h2>
-    <form id="form">
-      <input type="password" id="password" class="form-field" autofocus="autofocus"  placeholder="pick a password">
-      <input type="password" id="repassword" class="form-field" placeholder="re-enter password">
-      <input type="submit" value="Create" id="form-submit">
-    </form>
-  </div>
+  <script defer="defer">
+    document.getElementsByTagName('body')[0].innerHTML = `
+<div id="form-div">
+  <h2>classified.html</h2>
+  <form id="form">
+    <input type="password" id="password" class="form-field" autofocus="autofocus"  placeholder="pick a password">
+    <input type="password" id="repassword" class="form-field" placeholder="re-enter password">
+    <input type="submit" value="Create" id="form-submit">
+  </form>
+</div>
 
-  <div id=main-div>
-    <div class="navbar">
-      <button id="save">save changes</button>
+<div id=main-div>
+  <div class="navbar">
+    <button id="save">save changes</button>
+  </div>
+  <div id="text-div">
+    <div id="text" contenteditable="true"></div>
+    <div>
+      <div id="space">
     </div>
-    <div id="text-div">
-      <div id="text" contenteditable="true"></div>
-      <div>
-        <div id="space">
-      </div>
+  </div> 
+    </div> 
+  </div> 
     </div> 
   </div>
-  
-  <script defer="defer">
+    </div> 
+  </div> 
+</div>
+`
+
     // show save when text is modified
     document.getElementById("text").addEventListener("input", inputEvt => {
       root.style.setProperty('--display-save', "inline")

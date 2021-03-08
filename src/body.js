@@ -299,104 +299,286 @@ if (typeof window === 'undefined') { // executed in Node.js
   const source = htmlTop + document.currentScript.innerHTML + htmlBottom;
 
   window.addEventListener('DOMContentLoaded', () => {
-    document.body.childNodes[0].textContent = ''; // remove the first '//' required for cli excecution
-    document.title = filename; // set document title based on the file name
+    // set document html
+    document.getElementsByTagName('body')[0].innerHTML = `
+<div id="form-div">
+  <h2>classified.html</h2>
+  <form id="form">
+    <input type="password" id="password" class="form-field" autofocus="autofocus"  placeholder="pick a password">
+    <input type="password" id="repassword" class="form-field" placeholder="re-enter password">
+    <input type="submit" value="Create" id="form-submit">
+  </form>
+</div>
+
+<div id=main-div>
+  <div class="navbar">
+    <button id="save">save changes</button>
+  </div>
+  <div id="text-div">
+    <div id="text" contenteditable="true"></div>
+    <div>
+      <div id="space">
+    </div>
+  </div> 
+    </div> 
+  </div> 
+    </div> 
+  </div>
+    </div> 
+  </div> 
+</div>
+    `;
+    // set document css
+    const style = document.createElement('style');
+    style.textContent = `
+/*The state*/
+:root {
+  --display-form: inline;
+  --display-repw: inline;
+  --display-main: none;
+  --display-save: none;
+}
+
+body {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+#form-div {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 350px;
+  text-align:center;
+  display: var(--display-form);
+}
+
+#repassword {
+  display: var(--display-repw);
+}
+
+.form-field {
+  filter: none;
+  display: grid;
+  text-align: center; 
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid black;
+  margin-bottom: 10px;
+  outline: none;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 0px 0px 5px 0px;
+}
+
+#form-submit {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid black;
+  color: white;
+  font-weight: bold;
+  background-color: black;
+  outline: none;
+  font-family: 'Courier New', Courier, monospace;
+  cursor: pointer;
+  transition: 100ms ease;
+}
+
+#form-submit:hover {
+  padding: 5px;
+  border: 1px solid black;
+  background-color: white;
+  color: black;
+}
+
+#main-div {
+  display: var(--display-main);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: black white;
+}
+
+/* Chrome, Edge, and Safari scrollbar */
+::-webkit-scrollbar {
+  height: 7px;
+  width: 7px;
+}
+::-webkit-scrollbar-track {
+  background: white;
+}
+::-webkit-scrollbar-thumb {
+  background-color: black;
+}
+::selection {
+  background: black;
+  color: white;
+}
+
+#text-div {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%);
+  max-width: 818px;
+}
+
+#text {
+  min-height:1058px;
+  height:auto;
+  background-color: white;
+  /* border: 1px solid black; */
+  font-family: 'Courier New', Courier, monospace;
+  padding: 96px; /* Todo smaller padding small screens */
+  overflow-wrap: anywhere; /* other option: overflow-wrap:normal; overflow: hidden; overflow-x: scroll; */
+  outline: none;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  transition: 200ms ease;
+}
+
+@media only screen and (max-width: 800px) { /*small*/
+  #text-div {
+    top: 1%;
+    width: 96%;
+  }
+
+  #text {
+    padding: 15px;
+  }
+}
+
+@media only screen and (min-width: 800px) { /*large*/
+  #text-div {
+    top: 5%;
+    width: 90%;
+  }
+
+  #text {
+    padding: 96px;
+  }
+}
+
+#text:focus-within {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.30), 0 6px 20px 0 rgba(0, 0, 0, 0.25);
+}
+
+#save {
+  width: 30%;
+  min-width: 200px;
+  padding: 5px;
+  border: 1px solid black;
+  color: white;
+  font-weight: bold;
+  background-color: black;
+  outline: none;
+  font-family: 'Courier New', Courier, monospace;
+  cursor: pointer;
+  margin: 10px;
+  transition: 100ms ease;
+  display: var(--display-save);
+}
+
+#save:hover {
+  padding: 5px;
+  border: 1px solid black;
+  background-color: white;
+  color: black;
+}
+
+#space {
+  height: 5vh;
+  min-height: 50px;
+  width: 100%;
+}
+
+/* The navigation bar */
+.navbar {
+  overflow: hidden;
+  background-color: transparent;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 100;
+  text-align:center;
+}
+    `;
+    document.head.append(style);
+    // set document title based on the file name
+    document.title = filename;
+
+    const showDecrypted = (password, decryptedData) => {
+      // show content, hide login
+      root.style.setProperty('--display-form', 'none');
+      root.style.setProperty('--display-repw', 'none');
+      root.style.setProperty('--display-main', 'inline');
+
+      // add text field for the data
+      const dataInput = document.getElementById('text');
+      dataInput.innerText = decryptedData;
+      dataInput.addEventListener('input', _ => {
+        root.style.setProperty('--display-save', 'inline');
+      }, { once: true });
+
+      // focus if empty
+      if (decryptedData === '') {
+        dataInput.focus();
+      }
+
+      // add button to download source
+      const saveButton = document.getElementById('save');
+      saveButton.addEventListener('click', async (_e) => {
+        const tmpButton = document.createElement('a');
+        const updatedData = await encrypt(password, dataInput.innerText);
+        tmpButton.href = URL.createObjectURL(
+          new Blob(
+            [updateSourceData(source, updatedData)],
+            { type: 'data:text/plain' }
+          )
+        );
+        tmpButton.download = filename;
+        tmpButton.click();
+        console.log('clicked');
+      });
+    };
+
+    const form = document.getElementById('form');
+    const formSubmit = document.getElementById('form-submit');
+    const root = document.documentElement;
+
+    if (dataEmpty()) {
+      console.log('in data empty');
+      root.style.setProperty('--display-repw', 'inline');
+
+      formSubmit.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const password = form.password.value;
+        const repassword = form.repassword.value;
+        if (password === '') {
+          alert('cannot be empty');
+        } else if (password !== repassword) {
+          alert('passwords did not match, please try again');
+          form.password.value = '';
+          form.repassword.value = '';
+        } else {
+          await showDecrypted(password, '');
+        }
+      });
+    } else {
+      console.log('data not empty');
+      root.style.setProperty('--display-repw', 'none');
+
+      formSubmit.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const password = form.password.value;
+        const decryptionResult = await decrypt(password, data);
+        if (!decryptionResult.success) {
+          alert('Incorrect password');
+          form.password.value = '';
+        } else {
+          showDecrypted(password, decryptionResult.data);
+        }
+      });
+    };
   });
-
-  const showDecrypted = (password, decryptedData) => {
-    // add text field for the data
-    const dataInput = document.createElement('textarea');
-    dataInput.value = decryptedData;
-    document.body.appendChild(dataInput);
-
-    // add button to downlaod source
-    const downloadButton = document.createElement('a');
-    downloadButton.innerHTML = 'Download source';
-    const onClickDownload = async (event) => {
-      const tmpButton = document.createElement('a');
-      const updatedData = await encrypt(password, dataInput.value);
-      tmpButton.href = URL.createObjectURL(
-        new Blob(
-          [updateSourceData(source, updatedData)],
-          { type: 'data:text/plain' }
-        )
-      );
-      tmpButton.download = filename;
-      tmpButton.click();
-      console.log('clicked');
-      // downloadButton.click();
-    };
-    downloadButton.onclick = onClickDownload;
-    document.body.appendChild(downloadButton);
-  };
-
-  console.log('here');
-  if (dataEmpty()) {
-    console.log('in data empty');
-
-    // add text field for picking password
-    const passwordInput = document.createElement('input');
-    passwordInput.type = 'text';
-    passwordInput.placeholder = 'pick a password';
-    document.body.appendChild(passwordInput);
-
-    // newline
-    document.write('<br>');
-
-    const repasswordInput = document.createElement('input');
-    repasswordInput.type = 'text';
-    repasswordInput.placeholder = 're-enter password';
-    document.body.appendChild(repasswordInput);
-
-    // newline
-    document.write('<br>');
-
-    const onClickDecrypt = async (event) => {
-      event.preventDefault();
-      const password = passwordInput.value;
-      const repassword = repasswordInput.value;
-      if (password === '') {
-        alert('cannot be empty');
-      } else if (password !== repassword) {
-        alert('passwords did not match, please try again');
-        passwordInput.value = '';
-        repasswordInput.value = '';
-      } else {
-        await showDecrypted(password, '');
-      }
-    };
-
-    // add button to load source
-    const decryptButton = document.createElement('a');
-    decryptButton.innerHTML = 'Decrypt';
-    decryptButton.onclick = onClickDecrypt;
-    document.body.appendChild(decryptButton);
-  } else {
-    console.log('data not empty');
-    // add text field for the password
-    const passwordInput = document.createElement('input');
-    passwordInput.type = 'text';
-    document.body.appendChild(passwordInput);
-
-    // newline
-    document.write('<br>');
-
-    // add button to load source
-    const decryptButton = document.createElement('a');
-    decryptButton.innerHTML = 'Decrypt';
-    const onClickDecrypt = async (event) => {
-      event.preventDefault();
-      const password = passwordInput.value;
-      const decryptionResult = await decrypt(password, data);
-      if (!decryptionResult.success) {
-        alert('Incorrect password');
-      } else {
-        showDecrypted(password, decryptionResult.data);
-      }
-    };
-    decryptButton.onclick = onClickDecrypt;
-    document.body.appendChild(decryptButton);
-  };
-  // newline
-  document.write('<br>');
 }
