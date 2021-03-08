@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<style>
+
+/*The state*/
+:root {
+  --display-form: inline;
+  --display-repw: inline;
+  --display-main: none;
+  --display-save: none;
+}
+
+body {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+#form-div {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 350px;
+  text-align:center;
+  display: var(--display-form);
+}
+
+#repassword {
+  display: var(--display-repw);
+}
+
+.form-field {
+  filter: none;
+  display: grid;
+  text-align: center; 
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid black;
+  margin-bottom: 10px;
+  outline: none;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 0px 0px 5px 0px;
+}
+
+#form-submit {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid black;
+  color: white;
+  font-weight: bold;
+  background-color: black;
+  outline: none;
+  font-family: 'Courier New', Courier, monospace;
+  cursor: pointer;
+  transition: 100ms ease;
+}
+
+#form-submit:hover {
+  padding: 5px;
+  border: 1px solid black;
+  background-color: white;
+  color: black;
+}
+
+#main-div {
+  display: var(--display-main);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: black white;
+}
+
+/* Chrome, Edge, and Safari scrollbar */
+::-webkit-scrollbar {
+  height: 7px;
+  width: 7px;
+}
+::-webkit-scrollbar-track {
+  background: white;
+}
+::-webkit-scrollbar-thumb {
+  background-color: black;
+}
+::selection {
+  background: black;
+  color: white;
+}
+
+#text-div {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%);
+  max-width: 818px;
+}
+
+#text {
+  min-height:1058px;
+  height:auto;
+  background-color: white;
+  /* border: 1px solid black; */
+  font-family: 'Courier New', Courier, monospace;
+  padding: 96px; /* Todo smaller padding small screens */
+  overflow-wrap: anywhere; /* other option: overflow-wrap:normal; overflow: hidden; overflow-x: scroll; */
+  outline: none;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  transition: 200ms ease;
+}
+
+@media only screen and (max-width: 800px) { /*small*/
+  #text-div {
+    top: 1%;
+    width: 96%;
+  }
+
+  #text {
+    padding: 15px;
+  }
+}
+
+@media only screen and (min-width: 800px) { /*large*/
+  #text-div {
+    top: 5%;
+    width: 90%;
+  }
+
+  #text {
+    padding: 96px;
+  }
+}
+
+#text:focus-within {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.30), 0 6px 20px 0 rgba(0, 0, 0, 0.25);
+}
+
+#save {
+  width: 30%;
+  min-width: 200px;
+  padding: 5px;
+  border: 1px solid black;
+  color: white;
+  font-weight: bold;
+  background-color: black;
+  outline: none;
+  font-family: 'Courier New', Courier, monospace;
+  cursor: pointer;
+  margin: 10px;
+  transition: 100ms ease;
+  display: var(--display-save);
+}
+
+#save:hover {
+  padding: 5px;
+  border: 1px solid black;
+  background-color: white;
+  color: black;
+}
+
+#space {
+  height: 5vh;
+  min-height: 50px;
+  width: 100%;
+}
+
+/* The navigation bar */
+.navbar {
+  overflow: hidden;
+  background-color: transparent;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 100;
+  text-align:center;
+}
+  </style>
+
+</head>
+
+<body>
+  <div id="form-div">
+    <h2>classified.html</h2>
+    <form id="form">
+      <input type="password" id="password" class="form-field" autofocus="autofocus"  placeholder="pick a password">
+      <input type="password" id="repassword" class="form-field" placeholder="re-enter password">
+      <input type="submit" value="Create" id="form-submit">
+    </form>
+  </div>
+
+  <div id=main-div>
+    <div class="navbar">
+      <button id="save">save changes</button>
+    </div>
+    <div id="text-div">
+      <div id="text" contenteditable="true"></div>
+      <div>
+        <div id="space">
+      </div>
+    </div> 
+  </div>
+  
+  <script defer="defer">
+    // show save when text is modified
+    document.getElementById("text").addEventListener("input", inputEvt => {
+      root.style.setProperty('--display-save', "inline")
+    }, {once: true});
+
+    const form = document.getElementById("form");
+    const formSubmit = document.getElementById("form-submit");
+    const root = document.documentElement;
+    root.style.setProperty('--display-repw', "inline"); // explicitly set
+
+    formSubmit.addEventListener("click", (e) => {
+      e.preventDefault();
+      const password = form.password.value;
+      const repassword = form.repassword.value;
+
+      if (root.style.getPropertyValue('--display-repw') === "inline"){
+        if (password === "" || password !== repassword) {
+          console.log("not ok");
+        } else {
+          console.log("ok");
+        }
+        root.style.setProperty('--display-repw', "none");
+      }else if (root.style.getPropertyValue('--display-repw') === "none"){
+        if (password === "") {
+          console.log("not ok");
+        } else {
+          console.log("ok");
+        }
+        root.style.setProperty('--display-form', "none");
+        root.style.setProperty('--display-repw', "none");
+        root.style.setProperty('--display-main', "inline");
+      }
+    })
+  </script>
+</body>
+
+</html>
