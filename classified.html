@@ -522,8 +522,8 @@ if (typeof window === 'undefined') { // executed in Node.js
 <div id="form-div">
   <h2>classified.html</h2>
   <form id="form">
-    <input type="password" id="password" class="form-field" autofocus="autofocus"  placeholder="pick a password">
-    <input type="password" id="repassword" class="form-field" placeholder="re-enter password">
+    <input type="password" id="password" class="form-field" autocomplete="new-password" placeholder="pick a password">
+    <input type="password" id="repassword" class="form-field" autocomplete="new-password" placeholder="re-enter password">
     <input type="submit" value="Create" id="form-submit">
   </form>
 </div>
@@ -722,18 +722,24 @@ body {
   z-index: 100;
   text-align:center;
 }
-    `;
+`;
     document.head.append(style);
-    // set document title based on the file name
     document.title = filename;
+    const rootStyle = document.documentElement.style; // allows setting css variables
+    const form = document.getElementById('form');
+    const formSubmit = document.getElementById('form-submit');
+    const dataInput = document.getElementById('text');
+    const saveButton = document.getElementById('save');
+    const changePasswordButton = document.getElementById('change');
+    let currentPassword;
 
-    const preventUnload = (event) => {
-      event.preventDefault(); // this enables the message
-      event.returnValue = ''; // Chrome requires returnValue to be set
+    const preventUnload = (e) => {
+      e.preventDefault(); // this enables the unload warning message
+      e.returnValue = ''; // Chrome requires returnValue to be set
     };
 
     const activateSaveButton = _ => {
-      root.style.setProperty('--display-save', 'inline');
+      rootStyle.setProperty('--display-save', 'inline');
       // activate reminder about unsaved content
       window.addEventListener('beforeunload', preventUnload);
     };
@@ -756,41 +762,106 @@ body {
       }
     };
 
-    const showDecrypted = (password, decryptedData) => {
+    const getPasswordValue = () => {
+      const password = form.password.value;
+      const repassword = form.repassword.value;
+      if (password === '') {
+        alert('cannot be empty');
+        return undefined;
+      } else if (password !== repassword) {
+        alert('passwords did not match, please try again');
+        form.password.value = '';
+        form.repassword.value = '';
+        return undefined;
+      } else {
+        return password;
+      }
+    };
+
+    const pickPassword = async (e) => {
+      e.preventDefault();
+      const password = getPasswordValue();
+      if (password !== undefined) {
+        currentPassword = password;
+        await showDecrypted('');
+      }
+    };
+
+    const repickPassword = async (e) => {
+      e.preventDefault();
+      const password = getPasswordValue();
+      if (password !== undefined) {
+        rootStyle.setProperty('--display-save', 'inline');
+        currentPassword = password;
+        await showDecrypted(undefined);
+      }
+    };
+
+    const enterPassword = async (e) => {
+      e.preventDefault();
+      const password = form.password.value;
+      const decryptionResult = await decrypt(password, data);
+      if (!decryptionResult.success) {
+        alert('Incorrect password');
+        form.password.value = '';
+      } else {
+        currentPassword = password;
+        showDecrypted(decryptionResult.data);
+      }
+    };
+
+    changePasswordButton.addEventListener('click', async (_) => {
+      // update event listener
+      formSubmit.removeEventListener('click', pickPassword);
+      formSubmit.removeEventListener('click', enterPassword);
+      formSubmit.addEventListener('click', repickPassword);
+
+      // show the password selection ui
+      form.password.value = '';
+      form.repassword.value = '';
+      rootStyle.setProperty('--display-form', 'inline');
+      rootStyle.setProperty('--display-repw', 'inline');
+      rootStyle.setProperty('--display-main', 'none');
+      rootStyle.setProperty('--display-save', 'none');
+      form.password.focus();
+    });
+
+    saveButton.addEventListener('click', async (_) => {
+      // create a file of the source
+      const fileContent = updateSourceData(source, await encrypt(currentPassword, dataInput.innerText));
+      const file = new File([fileContent], filename, { type: 'text/html' });
+
+      // share or downlod the file depending on the device
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await shareFile(file);
+      } else {
+        downloadFile(file);
+      }
+
+      // reset saving functionality, user might continue use after save
+      rootStyle.setProperty('--display-save', 'none');
+      window.removeEventListener('beforeunload', preventUnload);
+      dataInput.addEventListener('input', activateSaveButton, { once: true });
+    });
+
+    // this will be called again if password is changed
+    const showDecrypted = (decryptedData) => {
       // show content, hide login
-      root.style.setProperty('--display-form', 'none');
-      root.style.setProperty('--display-repw', 'none');
-      root.style.setProperty('--display-main', 'inline');
+      rootStyle.setProperty('--display-form', 'none');
+      rootStyle.setProperty('--display-repw', 'none');
+      rootStyle.setProperty('--display-main', 'inline');
 
       // add text field for the data
-      const dataInput = document.getElementById('text');
-      dataInput.innerText = decryptedData;
+      if (decryptedData !== undefined) { // undefined means that password was changed
+        dataInput.innerText = decryptedData;
+      }
+      dataInput.removeEventListener('input', activateSaveButton, { once: true }); // remove if exists
       dataInput.addEventListener('input', activateSaveButton, { once: true });
-
-      // add button to download source
-      const saveButton = document.getElementById('save');
-      saveButton.addEventListener('click', async (_e) => {
-        // create a file of the source
-        const fileContent = updateSourceData(source, await encrypt(password, dataInput.innerText));
-        const file = new File([fileContent], filename, { type: 'text/plain' });
-
-        // share or downlod the file depending on the device
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await shareFile(file);
-        } else {
-          downloadFile(file);
-        }
-
-        // reset saving functionality, user might continue use after save
-        root.style.setProperty('--display-save', 'none');
-        window.removeEventListener('beforeunload', preventUnload);
-        dataInput.addEventListener('input', activateSaveButton, { once: true });
-      });
 
       // detect ctrl+s, save only if changes
       window.addEventListener('keydown', (event) => {
         if (!(event.ctrlKey && event.key === 's')) return true;
-        if (root.style.getPropertyValue('--display-save') === 'inline') {
+        if (rootStyle.getPropertyValue('--display-save') === 'inline') {
           saveButton.click();
         }
         event.preventDefault();
@@ -803,43 +874,16 @@ body {
       }
     };
 
-    const form = document.getElementById('form');
-    const formSubmit = document.getElementById('form-submit');
-    const root = document.documentElement;
-
     if (dataEmpty()) {
       console.log('in data empty');
-      root.style.setProperty('--display-repw', 'inline');
-
-      formSubmit.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const password = form.password.value;
-        const repassword = form.repassword.value;
-        if (password === '') {
-          alert('cannot be empty');
-        } else if (password !== repassword) {
-          alert('passwords did not match, please try again');
-          form.password.value = '';
-          form.repassword.value = '';
-        } else {
-          await showDecrypted(password, '');
-        }
-      });
+      rootStyle.setProperty('--display-repw', 'inline');
+      formSubmit.addEventListener('click', pickPassword);
     } else {
       console.log('data not empty');
-      root.style.setProperty('--display-repw', 'none');
-
-      formSubmit.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const password = form.password.value;
-        const decryptionResult = await decrypt(password, data);
-        if (!decryptionResult.success) {
-          alert('Incorrect password');
-          form.password.value = '';
-        } else {
-          showDecrypted(password, decryptionResult.data);
-        }
-      });
+      form.password.autocomplete = 'current-password';
+      form.password.focus();
+      rootStyle.setProperty('--display-repw', 'none');
+      formSubmit.addEventListener('click', enterPassword);
     };
   });
 }
