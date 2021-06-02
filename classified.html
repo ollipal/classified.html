@@ -721,15 +721,36 @@ body {
     // set document title based on the file name
     document.title = filename;
 
+    const preventUnload = (event) => {
+      event.preventDefault(); // this enables the message
+      event.returnValue = ''; // Chrome requires returnValue to be set
+    };
+
+    const activateSaveButton = _ => {
+      root.style.setProperty('--display-save', 'inline');
+      // activate reminder about unsaved content
+      window.addEventListener('beforeunload', preventUnload);
+    };
+
     const showDecrypted = (password, decryptedData) => {
       // show content, hide login
       root.style.setProperty('--display-form', 'none');
       root.style.setProperty('--display-repw', 'none');
       root.style.setProperty('--display-main', 'inline');
 
+      // add text field for the data
+      const dataInput = document.getElementById('text');
+      dataInput.innerText = decryptedData;
+      dataInput.addEventListener('input', activateSaveButton, { once: true });
+
       // add button to download source
       const saveButton = document.getElementById('save');
       saveButton.addEventListener('click', async (_e) => {
+        // reset saving functionality, user might continue use after save
+        root.style.setProperty('--display-save', 'none');
+        window.removeEventListener('beforeunload', preventUnload);
+        dataInput.addEventListener('input', activateSaveButton, { once: true });
+        // download the source
         const tmpButton = document.createElement('a');
         const updatedData = await encrypt(password, dataInput.innerText);
         tmpButton.href = URL.createObjectURL(
@@ -741,18 +762,6 @@ body {
         tmpButton.download = filename;
         tmpButton.click();
       });
-
-      // add text field for the data
-      const dataInput = document.getElementById('text');
-      dataInput.innerText = decryptedData;
-      dataInput.addEventListener('input', _ => {
-        root.style.setProperty('--display-save', 'inline');
-        // activate reminder about unsaved content
-        window.addEventListener('beforeunload', function (e) {
-          e.preventDefault(); // this enables the message
-          e.returnValue = ''; // Chrome requires returnValue to be set
-        });
-      }, { once: true });
 
       // detect ctrl+s, save only if changes
       window.addEventListener('keydown', (event) => {
