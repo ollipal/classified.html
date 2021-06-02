@@ -727,18 +727,6 @@ body {
       root.style.setProperty('--display-repw', 'none');
       root.style.setProperty('--display-main', 'inline');
 
-      // add text field for the data
-      const dataInput = document.getElementById('text');
-      dataInput.innerText = decryptedData;
-      dataInput.addEventListener('input', _ => {
-        root.style.setProperty('--display-save', 'inline');
-      }, { once: true });
-
-      // focus if empty
-      if (decryptedData === '') {
-        dataInput.focus();
-      }
-
       // add button to download source
       const saveButton = document.getElementById('save');
       saveButton.addEventListener('click', async (_e) => {
@@ -752,8 +740,29 @@ body {
         );
         tmpButton.download = filename;
         tmpButton.click();
-        console.log('clicked');
       });
+
+      // add text field for the data
+      const dataInput = document.getElementById('text');
+      dataInput.innerText = decryptedData;
+      dataInput.addEventListener('input', _ => {
+        root.style.setProperty('--display-save', 'inline');
+      }, { once: true });
+
+      // detect ctrl+s, save only if changes
+      window.addEventListener('keydown', (event) => {
+        if (!(event.ctrlKey && event.key === "s")) return true;
+        if (root.style.getPropertyValue('--display-save') === 'inline') {
+          saveButton.click();
+        }
+        event.preventDefault()
+        return false      
+      });
+
+      // focus if empty
+      if (decryptedData === '') {
+        dataInput.focus();
+      }
     };
 
     const form = document.getElementById('form');
