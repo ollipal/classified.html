@@ -5,7 +5,8 @@
     "start": "node ../classified.html",
     "build": "node build.js",
     "lint": "eslint . --fix",
-    "all": "npm run lint && npm run build && npm start"
+    "precommit": "npm run lint && npm run build",
+    "all": "npm run precommit && npm start"
   },
   "repository": {
     "type": "git",
