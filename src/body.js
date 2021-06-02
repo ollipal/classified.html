@@ -269,12 +269,10 @@ if (typeof window === 'undefined') { // executed in Node.js
       console.log(newData);
     }
 
-    if (newData !== '' || decryptedData === '') { // TODO do not re-enrypt if just reopening empty file
-      // if new data
+    // save if new data or first time
+    if (newData !== '' || dataEmpty()) {
       // copy file to tmp file, and rename
       const datas = decryptedData + newData;
-      console.log('datas');
-      console.log(datas);
       const updatedData = await encrypt(password, datas);
       fs.readFile(__filename, 'utf8', (err, source) => {
         if (err) throw err;
@@ -288,6 +286,9 @@ if (typeof window === 'undefined') { // executed in Node.js
           });
         });
       });
+    } else {
+      console.clear();
+      console.log('no changes to save');
     }
   })();
 } else { // executed in Browser
