@@ -344,7 +344,7 @@ const arrayBufferToBase64 = (buf) => (
 );
 
 const encryptionValuesToStrorableSring = (salt, iv, encrypted) => (
-  `salt:${salt.join('-')}\niv:${iv.join('-')}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}`
+  `salt:${salt.join('-')}\niv:${iv.join('-')}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}\n`
 );
 
 const encryptionValuesFromStroredSring = (str) => {
@@ -356,7 +356,7 @@ const encryptionValuesFromStroredSring = (str) => {
 };
 
 /*
-Placeholder to always home some data to enctrypt.
+Placeholder to always home some data to encrypt.
 This because on node decrypt seems to fail if there
 is no data to return (v15.9.0)
 */
@@ -418,7 +418,7 @@ const decrypt = async (password, data) => {
 const updateSourceData = (source, data) => {
   // remove the old data and insert new
   const sourceStart = source.split('const data' + ' = `')[0] + 'const data' + ' = `\n';
-  const sourceEnd = '\n\`;// ' + 'data end' + source.split('\`;// ' + 'data end')[1];
+  const sourceEnd = '\`;// ' + 'data end' + source.split('\`;// ' + 'data end')[1];
   return sourceStart + data + sourceEnd;
 };
 
@@ -462,7 +462,7 @@ if (typeof window === 'undefined') { // executed in Node.js
       decryptedData = decryptionResult.data;
     }
 
-    let newData = '';
+    let newData = decryptedData.endsWith('\n') ? '' : '\n';
     let newNewData;
 
     const printConstents = () => {
@@ -472,7 +472,7 @@ if (typeof window === 'undefined') { // executed in Node.js
 
     while (true) {
       printConstents();
-      newNewData = await question('enter new data (empty to skip): ');
+      newNewData = await question('enter new data (empty to end): ');
       if (newNewData === '') {
         console.clear();
         break;
@@ -731,6 +731,7 @@ body {
     const dataInput = document.getElementById('text');
     const saveButton = document.getElementById('save');
     const changePasswordButton = document.getElementById('change');
+    const emptyButton = document.getElementById('empty');
     let currentPassword;
 
     const preventUnload = (e) => {
@@ -810,6 +811,19 @@ body {
       }
     };
 
+    const obtainFile = async (data, name) => {
+      // create a file of the source
+      const fileContent = updateSourceData(source, data);
+      const file = new File([fileContent], name, { type: 'text/html' });
+
+      // share or downlod the file depending on the device
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await shareFile(file);
+      } else {
+        downloadFile(file);
+      }
+    };
+
     changePasswordButton.addEventListener('click', async (_) => {
       // update event listener
       formSubmit.removeEventListener('click', pickPassword);
@@ -827,21 +841,16 @@ body {
     });
 
     saveButton.addEventListener('click', async (_) => {
-      // create a file of the source
-      const fileContent = updateSourceData(source, await encrypt(currentPassword, dataInput.innerText));
-      const file = new File([fileContent], filename, { type: 'text/html' });
-
-      // share or downlod the file depending on the device
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await shareFile(file);
-      } else {
-        downloadFile(file);
-      }
+      await obtainFile(await encrypt(currentPassword, dataInput.innerText), filename);
 
       // reset saving functionality, user might continue use after save
       rootStyle.setProperty('--display-save', 'none');
       window.removeEventListener('beforeunload', preventUnload);
       dataInput.addEventListener('input', activateSaveButton, { once: true });
+    });
+
+    emptyButton.addEventListener('click', async (_) => {
+      await obtainFile('', filename);
     });
 
     // this will be called again if password is changed
