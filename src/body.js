@@ -294,7 +294,11 @@ if (typeof window === 'undefined') { // executed in Node.js
 } else { // executed in Browser
   const htmlTop = "//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>";
   const htmlBottom = '<\/script></body></html>';
-  const filename = location.href.split('/').slice(-1);
+  let filename = location.href.split('/').slice(-1)[0];
+  // %2F means forward slash on mobile chrome for local files
+  if (navigator.canShare) {
+    filename = filename.split('%2F').slice(-1)[0];
+  }
   const source = htmlTop + document.currentScript.innerHTML + htmlBottom;
 
   window.addEventListener('DOMContentLoaded', () => {
@@ -517,6 +521,24 @@ body {
       window.addEventListener('beforeunload', preventUnload);
     };
 
+    const downloadFile = (file) => {
+      const tmpButton = document.createElement('a');
+      tmpButton.href = URL.createObjectURL(file);
+      tmpButton.download = filename;
+      tmpButton.click();
+    };
+
+    const shareFile = async (file) => {
+      try {
+        await navigator.share({
+          files: [file],
+          title: filename
+        });
+      } catch (error) {
+        if (confirm(`Sharing failed: "${error.message}".\nDownload intead?`)) downloadFile(file);
+      }
+    };
+
     const showDecrypted = (password, decryptedData) => {
       // show content, hide login
       root.style.setProperty('--display-form', 'none');
@@ -531,21 +553,21 @@ body {
       // add button to download source
       const saveButton = document.getElementById('save');
       saveButton.addEventListener('click', async (_e) => {
+        // create a file of the source
+        const fileContent = updateSourceData(source, await encrypt(password, dataInput.innerText));
+        const file = new File([fileContent], filename, { type: 'text/plain' });
+
+        // share or downlod the file depending on the device
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await shareFile(file);
+        } else {
+          downloadFile(file);
+        }
+
         // reset saving functionality, user might continue use after save
         root.style.setProperty('--display-save', 'none');
         window.removeEventListener('beforeunload', preventUnload);
         dataInput.addEventListener('input', activateSaveButton, { once: true });
-        // download the source
-        const tmpButton = document.createElement('a');
-        const updatedData = await encrypt(password, dataInput.innerText);
-        tmpButton.href = URL.createObjectURL(
-          new Blob(
-            [updateSourceData(source, updatedData)],
-            { type: 'data:text/plain' }
-          )
-        );
-        tmpButton.download = filename;
-        tmpButton.click();
       });
 
       // detect ctrl+s, save only if changes
