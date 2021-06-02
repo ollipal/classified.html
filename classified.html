@@ -530,7 +530,9 @@ if (typeof window === 'undefined') { // executed in Node.js
 
 <div id=main-div>
   <div class="navbar">
+    <button id="change">change password</button>
     <button id="save">save changes</button>
+    <button id="empty">get new empty</button>
   </div>
   <div id="text-div">
     <div id="text" contenteditable="true"></div>
@@ -681,7 +683,7 @@ body {
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.30), 0 6px 20px 0 rgba(0, 0, 0, 0.25);
 }
 
-#save {
+#change, #save, #empty {
   width: 30%;
   min-width: 200px;
   padding: 5px;
@@ -697,7 +699,7 @@ body {
   display: var(--display-save);
 }
 
-#save:hover {
+#change:hover, #save:hover, #empty:hover {
   padding: 5px;
   border: 1px solid black;
   background-color: white;
