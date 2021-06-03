@@ -725,14 +725,16 @@ body {
 `;
     document.head.append(style);
     document.title = filename;
-    const rootStyle = document.documentElement.style; // allows setting css variables
+
     const form = document.getElementById('form');
     const formSubmit = document.getElementById('form-submit');
     const dataInput = document.getElementById('text');
     const saveButton = document.getElementById('save');
     const changePasswordButton = document.getElementById('change');
     const emptyButton = document.getElementById('empty');
-    let currentPassword;
+    let currentPassword; // this can change if the user changes password
+
+    const setProperty = (key, value) => document.documentElement.style.setProperty(key, value);
 
     const preventUnload = (e) => {
       e.preventDefault(); // this enables the unload warning message
@@ -740,9 +742,8 @@ body {
     };
 
     const activateSaveButton = _ => {
-      rootStyle.setProperty('--display-save', 'inline');
-      // activate reminder about unsaved content
-      window.addEventListener('beforeunload', preventUnload);
+      setProperty('--display-save', 'inline');
+      window.addEventListener('beforeunload', preventUnload); // activate reminder about unsaved content
     };
 
     const downloadFile = (file) => {
@@ -750,16 +751,28 @@ body {
       tmpButton.href = URL.createObjectURL(file);
       tmpButton.download = filename;
       tmpButton.click();
+      tmpButton.remove();
     };
 
     const shareFile = async (file) => {
       try {
-        await navigator.share({
-          files: [file],
-          title: filename
-        });
+        await navigator.share({ files: [file], title: filename });
       } catch (error) {
         if (confirm(`Sharing failed: "${error.message}".\nDownload intead?`)) downloadFile(file);
+      }
+    };
+
+    /*
+    Download or share the file depending on the device used
+    */
+    const obtainFile = async (data, name) => {
+      const fileContent = updateSourceData(source, data);
+      const file = new File([fileContent], name, { type: 'text/html' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await shareFile(file);
+      } else {
+        downloadFile(file);
       }
     };
 
@@ -783,6 +796,7 @@ body {
       e.preventDefault();
       const password = getPasswordValue();
       if (password !== undefined) {
+        formSubmit.removeEventListener('click', pickPassword);
         currentPassword = password;
         await showDecrypted('');
       }
@@ -792,7 +806,8 @@ body {
       e.preventDefault();
       const password = getPasswordValue();
       if (password !== undefined) {
-        rootStyle.setProperty('--display-save', 'inline');
+        setProperty('--display-save', 'inline');
+        formSubmit.removeEventListener('click', repickPassword);
         currentPassword = password;
         await showDecrypted(undefined);
       }
@@ -806,37 +821,20 @@ body {
         alert('Incorrect password');
         form.password.value = '';
       } else {
+        formSubmit.removeEventListener('click', enterPassword);
         currentPassword = password;
         showDecrypted(decryptionResult.data);
       }
     };
 
-    const obtainFile = async (data, name) => {
-      // create a file of the source
-      const fileContent = updateSourceData(source, data);
-      const file = new File([fileContent], name, { type: 'text/html' });
-
-      // share or downlod the file depending on the device
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await shareFile(file);
-      } else {
-        downloadFile(file);
-      }
-    };
-
     changePasswordButton.addEventListener('click', async (_) => {
-      // update event listener
-      formSubmit.removeEventListener('click', pickPassword);
-      formSubmit.removeEventListener('click', enterPassword);
       formSubmit.addEventListener('click', repickPassword);
-
-      // show the password selection ui
       form.password.value = '';
       form.repassword.value = '';
-      rootStyle.setProperty('--display-form', 'inline');
-      rootStyle.setProperty('--display-repw', 'inline');
-      rootStyle.setProperty('--display-main', 'none');
-      rootStyle.setProperty('--display-save', 'none');
+      setProperty('--display-form', 'inline');
+      setProperty('--display-repw', 'inline');
+      setProperty('--display-main', 'none');
+      setProperty('--display-save', 'none');
       form.password.focus();
     });
 
@@ -844,7 +842,7 @@ body {
       await obtainFile(await encrypt(currentPassword, dataInput.innerText), filename);
 
       // reset saving functionality, user might continue use after save
-      rootStyle.setProperty('--display-save', 'none');
+      setProperty('--display-save', 'none');
       window.removeEventListener('beforeunload', preventUnload);
       dataInput.addEventListener('input', activateSaveButton, { once: true });
     });
@@ -856,21 +854,20 @@ body {
     // this will be called again if password is changed
     const showDecrypted = (decryptedData) => {
       // show content, hide login
-      rootStyle.setProperty('--display-form', 'none');
-      rootStyle.setProperty('--display-repw', 'none');
-      rootStyle.setProperty('--display-main', 'inline');
+      setProperty('--display-form', 'none');
+      setProperty('--display-repw', 'none');
+      setProperty('--display-main', 'inline');
 
-      // add text field for the data
-      if (decryptedData !== undefined) { // undefined means that password was changed
+      if (decryptedData !== undefined) {
         dataInput.innerText = decryptedData;
       }
-      dataInput.removeEventListener('input', activateSaveButton, { once: true }); // remove if exists
+      dataInput.removeEventListener('input', activateSaveButton, { once: true }); // remove if previous still exists
       dataInput.addEventListener('input', activateSaveButton, { once: true });
 
-      // detect ctrl+s, save only if changes
+      // detect ctrl+s, save only if save button is shown
       window.addEventListener('keydown', (event) => {
         if (!(event.ctrlKey && event.key === 's')) return true;
-        if (rootStyle.getPropertyValue('--display-save') === 'inline') {
+        if (document.documentElement.style.getPropertyValue('--display-save') === 'inline') {
           saveButton.click();
         }
         event.preventDefault();
@@ -884,14 +881,12 @@ body {
     };
 
     if (dataEmpty()) {
-      console.log('in data empty');
-      rootStyle.setProperty('--display-repw', 'inline');
+      setProperty('--display-repw', 'inline');
       formSubmit.addEventListener('click', pickPassword);
     } else {
-      console.log('data not empty');
       form.password.autocomplete = 'current-password';
       form.password.focus();
-      rootStyle.setProperty('--display-repw', 'none');
+      setProperty('--display-repw', 'none');
       formSubmit.addEventListener('click', enterPassword);
     };
   });
