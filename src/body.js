@@ -1,3 +1,5 @@
+const VERSION = '0.0.1';
+
 const inBrowser = () => typeof window !== 'undefined';
 
 const checkNodeVersionSupported = () => {
@@ -213,6 +215,9 @@ if (typeof window === 'undefined') { // executed in Node.js
   const os = require('os');
   const readline = require('readline');
 
+  const filename = path.basename(__filename);
+  const tmpPath = path.join(os.tmpdir(), filename);
+
   const question = (q) => new Promise(resolve => {
     const rl = readline.createInterface({
       input: process.stdin,
@@ -224,10 +229,45 @@ if (typeof window === 'undefined') { // executed in Node.js
     });
   });
 
-  const filename = path.basename(__filename);
-  const tmpPath = path.join(os.tmpdir(), filename);
+  const downloadEmpty = async (savePath) => {
+    if (savePath === undefined) {
+      const proposedDir = path.dirname(__filename) + path.sep;
+      let directory = await question(`save directory? [default: ${proposedDir}] `);
+      if (directory === '') directory = proposedDir;
+      if (!(directory.endsWith(path.sep))) directory += path.sep;
+      let name = await question('save name? ');
+      if (!(name.endsWith('.html'))) name += '.html';
+      savePath = directory + name;
+    }
+
+    try {
+      const source = fs.readFileSync(__filename, 'utf8');
+      fs.writeFileSync(savePath, updateSourceData(source, ''), { flag: 'wx' });
+      console.log(`${savePath} saved`);
+    } catch (err) {
+      console.log(`Could not save ${savePath}:\n${err}`);
+    }
+  };
 
   (async () => {
+    const args = process.argv.slice(2);
+    if (['-h', '--help'].includes(args[0])) {
+      console.log(`Usage: node ${filename} [OPTIONS] [ARGS]
+
+classified.html version ${VERSION}
+Normal use does not require any options or arguments.
+      
+Options:
+  -h, --help\t\tShow this help message
+  -e, --empty\t\tDownload empty classified.html. Will ask for save location if not specified in ARGS
+      `);
+      process.exit();
+    }
+    if (['-e', '--empty'].includes(args[0])) {
+      await downloadEmpty(args[1]);
+      process.exit();
+    }
+
     let password, decryptedData;
     if (dataEmpty()) {
       password = await pickPassword();
@@ -250,14 +290,14 @@ if (typeof window === 'undefined') { // executed in Node.js
     let newData = decryptedData.endsWith('\n') ? '' : '\n';
     let newNewData;
 
-    const printConstents = () => {
+    const printContents = () => {
       console.clear();
       console.log(decryptedData + newData);
     };
 
     while (true) {
-      printConstents();
-      newNewData = await question('enter new data (empty to end): ');
+      printContents();
+      newNewData = await question('enter new data (empty to exit): ');
       if (newNewData === '') {
         console.clear();
         break;
@@ -272,20 +312,17 @@ if (typeof window === 'undefined') { // executed in Node.js
     // save if new data or first time
     if (newData !== '' || dataEmpty()) {
       // copy file to tmp file, and rename
-      const datas = decryptedData + newData;
-      const updatedData = await encrypt(password, datas);
-      fs.readFile(__filename, 'utf8', (err, source) => {
-        if (err) throw err;
+      try {
+        const source = fs.readFileSync(__filename, 'utf8');
+        const updatedData = await encrypt(password, decryptedData + newData);
         const updatedSource = updateSourceData(source, updatedData);
-        fs.writeFile(tmpPath, updatedSource, (err) => {
-          if (err) throw err;
-          fs.rename(tmpPath, __filename, (err) => {
-            if (err) throw err;
-            console.clear();
-            console.log('changes saved!');
-          });
-        });
-      });
+        fs.writeFileSync(tmpPath, updatedSource);
+        fs.renameSync(tmpPath, __filename);
+        console.clear();
+        console.log('changes saved!');
+      } catch (err) {
+        console.log(`Could not save ${__filename}:\n${err}`);
+      };
     } else {
       console.clear();
       console.log('no changes to save');
@@ -594,7 +631,7 @@ body {
         setProperty('--display-save', 'inline');
         formSubmit.removeEventListener('click', repickPassword);
         currentPassword = password;
-        await showDecrypted(undefined);
+        await showDecrypted();
       }
     };
 
@@ -637,7 +674,7 @@ body {
     });
 
     // this will be called again if password is changed
-    const showDecrypted = (decryptedData) => {
+    const showDecrypted = (decryptedData = undefined) => {
       // show content, hide login
       setProperty('--display-form', 'none');
       setProperty('--display-repw', 'none');
