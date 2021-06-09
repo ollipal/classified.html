@@ -209,6 +209,7 @@ Example usage:
 
   // global variables to handle Node.js state
   let password, decryptedData, newData;
+  let passwordChanged = false;
 
   /*
   prompt from: https://github.com/ollipal/minimal-password-prompt
@@ -397,11 +398,11 @@ Example usage:
   });
 
   /*
-  Save changes only if new data or first time.
+  Save changes only if new data, first time or password changed.
   Saving is done by writing data to a temporary file, and renaming it to the actual one.
   */
   const saveChanges = async (password, decryptedData, newData) => {
-    if (newData !== '' || dataEmpty()) {
+    if (newData !== '' || dataEmpty() || passwordChanged) {
       // copy file to tmp file, and rename
       try {
         const tmpPath = path.join(os.tmpdir(), filename);
@@ -412,7 +413,7 @@ Example usage:
         fs.renameSync(tmpPath, __filename);
         console.log('changes saved!');
       } catch (err) {
-        console.log(`Could not save ${__filename}:\n${err}`);
+        console.log(`could not save ${__filename}:\n${err}`);
       };
     } else {
       console.log('no changes to save');
@@ -420,12 +421,12 @@ Example usage:
   };
 
   /*
-   * Command handling helpers:
-   */
+  Command handling helpers:
+  */
 
   const printContents = () => {
     console.clear();
-    console.log(decryptedData + newData);
+    if (decryptedData + newData !== '\n') console.log(decryptedData + newData);
   };
 
   const addText = (value) => {
@@ -433,11 +434,20 @@ Example usage:
     printContents();
   };
 
+  const changePassword = async () => {
+    console.clear();
+    console.log('changing password:');
+    password = await pickPassword();
+    passwordChanged = true;
+  };
+
   /*
-   * Handle user command. Returns a boolean which tells was the command handled properly.
-   */
+  Handle user command. Returns a boolean which tells was the command handled properly
+  and a message that should be logged.
+  */
   const handleCommand = async (command, target, value) => {
-    unknownCommand = false;
+    let unknownCommand = false;
+    let handleMessage;
     if (command === 'exit' || command === undefined) {
       console.clear();
       await saveChanges(password, decryptedData, newData);
@@ -445,11 +455,13 @@ Example usage:
       process.exit();
     } else if (command === 'add' && target === 'text' && value !== undefined) {
       addText(value);
+    } else if (command === 'password') {
+      await changePassword();
+      handleMessage = 'password changed successfully';
     } else {
-      console.log('unknown command');
       unknownCommand = true;
     }
-    return !unknownCommand;
+    return [!unknownCommand, handleMessage];
   };
 
   (async () => {
@@ -475,9 +487,10 @@ Example usage:
 
     // handle any other command that required password except exit
     if (!['exit', undefined].includes(command)) {
-      const handled = await handleCommand(command, target, value);
+      const [handled, message] = await handleCommand(command, target, value);
       console.clear();
       if (handled) {
+        if (message) console.log(message);
         await saveChanges(password, decryptedData, newData);
       } else {
         console.log('error: could not handle command');
@@ -487,11 +500,13 @@ Example usage:
     }
 
     let previous = ['add text ', 'exit']; // hints
+    let handled, message;
     while (true) {
       printContents();
+      if (message) console.log(message);
       const reply = await question("type 'help', enter a command or leave empty to save and exit: ", previous);
       const [command, target, value] = await parseCommand(reply);
-      const handled = await handleCommand(command, target, value); // this can exit the program
+      [handled, message] = await handleCommand(command, target, value); // this can exit the program
 
       // prepend list of hints if values were used, and is different to the first one
       if (handled) {
