@@ -795,7 +795,7 @@ body {
       const password = form.password.value;
       const repassword = form.repassword.value;
       if (password === '') {
-        alert('cannot be empty');
+        alert('password cannot be empty');
         return undefined;
       } else if (password !== repassword) {
         alert('passwords did not match, please try again');
@@ -843,6 +843,12 @@ body {
     };
 
     changePasswordButton.addEventListener('click', async (_) => {
+      // reset pre-enterPassword changes
+      form.password.autocomplete = 'new-password';
+      form.password.placeholder = 'pick a password';
+      formSubmit.value = 'Create';
+
+      // set UI correclty
       formSubmit.addEventListener('click', repickPassword);
       form.password.value = '';
       form.repassword.value = '';
@@ -900,7 +906,9 @@ body {
       formSubmit.addEventListener('click', pickPassword);
     } else {
       form.password.autocomplete = 'current-password';
+      form.password.placeholder = 'enter password';
       form.password.focus();
+      formSubmit.value = 'Open';
       setProperty('--display-repw', 'none');
       formSubmit.addEventListener('click', enterPassword);
     };
