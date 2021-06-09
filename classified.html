@@ -673,6 +673,8 @@ Example usage:
     } else if (command === 'password') {
       await changePassword();
       handleMessage = 'password changed successfully';
+    } else if (command === 'discard') {
+      process.exit(); // this will trigger on exit with exitHandled = false
     } else {
       unknownCommand = true;
     }
@@ -700,8 +702,8 @@ Example usage:
     // initialize new data
     newData = decryptedData.endsWith('\n') ? '' : '\n';
 
-    // handle any other command that required password except exit
-    if (!['exit', undefined].includes(command)) {
+    // handle any other command that required password except the default (exit)
+    if (command !== undefined) {
       const [handled, message] = await handleCommand(command, target, value);
       console.clear();
       if (handled) {
