@@ -392,15 +392,15 @@ if (!inBrowser()) { // executed in Node.js
 Open in browser or with Node.js by running 'node ${filename}'
 
 
-Advanced usage: [COMMAND [TARGET [VALUE...]]]
+Advanced usage: node ${filename} [COMMAND [TARGET [DATA...]]]
 
 COMMANDS:
   Data modifying commands:
-    add         add VALUE to TARGET
-    replace     replace existing value with VALUE on TARGET
-    delete      delete TARGET and its value
-    copy        copy TARGET's value to clipboard
-    show        show TARGET's value on the terminal, clear the terminal after pressing enter and exit
+    add         add DATA to TARGET
+    replace     replace existing data with DATA on TARGET
+    delete      delete TARGET and its data
+    copy        copy TARGET's data to clipboard
+    show        show TARGET's data on the terminal, clear the terminal after pressing enter and exit
     password    change password. Will ask the new one if not spesified in in TARGET
 
   Other commands:
@@ -419,7 +419,7 @@ TARGETS:
 Example usage:
   add text This is classified.html    append 'This is classified.html' row to text
   delete row 1                        delete the first row of text
-  add value 'server key' 1234         add a new value '1234' with a key 'server key'
+  add value 'server key' 1234         add value '1234' with a key 'server key' to values
   copy value 'server key'             copy value with a key 'server key' to the clipboard`;
 
   // global variables to handle Node.js state
