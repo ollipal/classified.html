@@ -433,14 +433,42 @@ if (typeof window === 'undefined') { // executed in Node.js
   const filename = path.basename(__filename);
   const tmpPath = path.join(os.tmpdir(), filename);
 
-  const question = (q) => new Promise(resolve => {
+  /*
+  Ask question and wait for reply.
+  Allow using up/down arrows for prefilling options if given.
+  */
+  const question = (question, previous = []) => new Promise(resolve => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
-    rl.question(q, (a) => {
+
+    const maxPreviousIndex = previous.length - 1;
+    let previousIndex = -1;
+    const clearLine = () => rl.write(null, { ctrl: true, name: 'u' });
+    const detectArrow = (input) => {
+      if (input === '\u001b[A') { // arrow up
+        if (previousIndex < maxPreviousIndex) {
+          previousIndex++;
+          clearLine();
+          rl.write(previous[previousIndex]);
+        }
+      } else if (input === '\u001b[B') { // down arrow
+        if (previousIndex > -1) {
+          previousIndex--;
+          clearLine();
+          rl.write(previous[previousIndex]);
+        } else {
+          clearLine();
+        }
+      }
+    };
+
+    process.stdin.on('data', detectArrow);
+    rl.question(question, (reply) => {
+      process.stdin.removeListener('data', detectArrow);
       rl.close();
-      resolve(a);
+      resolve(reply);
     });
   });
 
@@ -465,21 +493,58 @@ if (typeof window === 'undefined') { // executed in Node.js
   };
 
   (async () => {
-    const args = process.argv.slice(2);
-    if (['-h', '--help'].includes(args[0])) {
-      console.log(`Usage: node ${filename} [OPTIONS] [ARGS]
+    // always clear the console on exit if exit has not been handled properly
+    let exitHandled = false;
+    process.on('exit', (code) => {
+      if (!exitHandled) {
+        console.clear();
+        console.log('possible changes discarded');
+      }
+      process.exit(code);
+    });
 
-classified.html version ${VERSION}
-Normal use does not require any options or arguments.
-      
-Options:
-  -h, --help\t\tShow this help message
-  -e, --empty\t\tDownload empty classified.html. Will ask for save location if not specified in ARGS
-      `);
+    const args = process.argv.slice(2);
+    if (['-h', '--help', 'help'].includes(args[0])) {
+      console.log(`classified.html version ${VERSION}
+Open in browser or with Node.js by running 'node ${filename}'
+
+
+Advanced usage: [COMMAND [TARGET [VALUE...]]]
+
+COMMANDS:
+  Data modifying commands:
+    add         add VALUE to TARGET
+    replace     replace existing value with VALUE on TARGET
+    delete      delete TARGET and its value
+    copy        copy TARGET's value to clipboard
+    show        show TARGET's value on the terminal, clear the terminal after pressing enter and exit
+    password    change password. Will ask the new one if not spesified in in TARGET
+
+  Other commands:
+    new         download empty classified.html. Will ask for save location if not specified in TARGET
+    help        show this help message
+    exit        save and exit, same as the default when the command is left empty
+    discard     discard changes, clear concole and quit, same as pressing ctrl+c
+  
+TARGETS:
+  text          all of the text
+  row ROWNUM    some spesific row of text, for example 'row 5'
+  values        all of the values
+  value KEY     spesific value, for example 'value "server key"'. Key must be quoteted if it has spaces.
+
+
+Example usage:
+  add text This is classified.html    append 'This is classified.html' row to text
+  delete row 1                        delete the first row of text
+  add value 'server key' 1234         add a new value '1234' with a key 'server key'
+  copy value 'server key'             copy value with a key 'server key' to the clipboard
+`);
+      exitHandled = true;
       process.exit();
     }
-    if (['-e', '--empty'].includes(args[0])) {
+    if (['-n', '--new', 'new'].includes(args[0])) {
       await downloadEmpty(args[1]);
+      exitHandled = true;
       process.exit();
     }
 
@@ -502,6 +567,8 @@ Options:
       decryptedData = decryptionResult.data;
     }
 
+    console.clear();
+    console.log(decryptedData);
     let newData = decryptedData.endsWith('\n') ? '' : '\n';
     let newNewData;
 
@@ -510,18 +577,44 @@ Options:
       console.log(decryptedData + newData);
     };
 
-    while (true) {
-      printContents();
-      newNewData = await question('enter new data (empty to exit): ');
-      if (newNewData === '') {
-        console.clear();
-        break;
-      };
+    /*
+    Ask for new command and parse the response to command, target and value.
+    Use a list of previous commands as hints.
+    */
+    const parseCommand = async (previous) => {
+      const reply = await question("type 'help', enter a command or leave empty to exit: ", previous);
+      let [command, target, ...value] = reply.split(' ');
+      value = value.join(' ');
+      if (command === '') command = undefined;
+      if (value === '') value = undefined;
+      if (value === "''" || value === '""') value = '';
+      return [command, target, value];
+    };
+
+    const addText = (value) => {
+      newNewData = value;
       newData += newNewData + '\n';
-      if (decryptedData !== '') {
-        console.log(decryptedData);
-      };
-      console.log(newData);
+      printContents();
+    };
+
+    let previous = ['add text ', 'exit']; // hints
+    while (true) {
+      unknownCommand = false;
+      const [command, target, value] = await parseCommand(previous);
+      if (command === 'exit' || command === undefined) {
+        break;
+      } else if (command === 'add' && target === 'text' && value !== undefined) {
+        addText(value);
+      } else {
+        console.log('unknown command');
+        unknownCommand = true;
+      }
+
+      // prepend list of hints if value was used, and is different to the first one
+      if (!unknownCommand) {
+        const newPrevious = `${command} ${target ? target + ' ' : ''}`;
+        if (newPrevious !== previous[0]) previous = [newPrevious, ...previous];
+      }
     }
 
     // save if new data or first time
@@ -535,12 +628,14 @@ Options:
         fs.renameSync(tmpPath, __filename);
         console.clear();
         console.log('changes saved!');
+        exitHandled = true;
       } catch (err) {
         console.log(`Could not save ${__filename}:\n${err}`);
       };
     } else {
       console.clear();
       console.log('no changes to save');
+      exitHandled = true;
     }
   })();
 } else { // executed in Browser
