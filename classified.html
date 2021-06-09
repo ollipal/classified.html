@@ -213,9 +213,13 @@ function fromByteArray (uint8) {
  * base64-js end
  */
 
-const VERSION = '0.0.1';
+/*
+ * Shared code and functions for all platforms
+ */
 
+const VERSION = '0.0.1';
 const inBrowser = () => typeof window !== 'undefined';
+const dataEmpty = () => data === '\n';
 
 const checkNodeVersionSupported = () => {
   const NODE_VERSION = process.versions.node;
@@ -225,9 +229,7 @@ const checkNodeVersionSupported = () => {
   }
 };
 
-const dataEmpty = () => data === '\n';
-
-// set variables based on the execution environment
+// set global variables based on the execution environment
 let subtle;
 let getRandomValues;
 const utf8Encoder = new TextEncoder('utf-8');
@@ -245,65 +247,47 @@ if (inBrowser()) {
   };
 }
 
-// from: https://github.com/ollipal/minimal-password-prompt
-const captureStdin = (onData) => {
-  process.stdin.setEncoding('utf-8');
-  process.stdin.setRawMode(true);
-  process.stdin.on('data', onData);
-  process.stdin.resume();
+/*
+Convert a long data string to parts of certain length for storage
+*/
+const toLines = (str) => {
+  const numLines = Math.ceil(str.length / DATA_LINE_LEN);
+  const lines = new Array(numLines);
+  for (let i = 0, start = 0; i < numLines; ++i, start += DATA_LINE_LEN) {
+    lines[i] = str.substr(start, DATA_LINE_LEN);
+  }
+  return lines.join('\n');
 };
 
-const releaseStdin = (onData) => {
-  process.stdin.pause();
-  process.stdin.removeListener('data', onData);
-  process.stdin.setRawMode(false);
-  process.stdout.write('\n');
-};
+/*
+Convert array buffer to storable base64 characters
+*/
+const arrayBufferToBase64 = (buf) => fromByteArray(new Uint8Array(buf));
 
-const prompt = (question, ctrlcExits = true) => (
-  new Promise((resolve, reject) => {
-    let input = '';
-    const onData = (data) => {
-      switch (data) {
-        case '\u000A': // \n
-        case '\u000D': // \r
-        case '\u0004': // Ctrl+D
-          releaseStdin(onData);
-          resolve(input);
-          break;
-        case '\u0003': // Ctrl+C
-          releaseStdin(onData);
-          ctrlcExits // exit or raise error
-            ? process.exit()
-            : reject(new Error('Ctrl+C'));
-          break;
-        case '\u0008': // Backspace
-        case '\u007F': // Delete
-          input = input.slice(0, -1);
-          break;
-        default: // any other
-          input += data;
-      };
-    };
-    captureStdin(onData);
-    process.stdout.write(question);
-  })
+/*
+Helper for storing user data in a recoverable way as a string
+*/
+const encryptionValuesToStrorableSring = (salt, iv, encrypted) => (
+  `salt:${salt.join('-')}\niv:${iv.join('-')}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}\n`
 );
 
-const pickPassword = async () => {
-  let password, repassword;
-  while (true) {
-    password = await prompt('pick a password: ');
-    repassword = await prompt('re-enter password: ');
-    if (password === '') {
-      console.log('cannot be empty');
-      continue;
-    }
-    if (password === repassword) break;
-    console.log('passwords did not match, please try again:');
-  }
-  return password;
+/*
+Helper for recovering stored data from string
+*/
+const encryptionValuesFromStroredSring = (str) => {
+  const lines = str.split(/\r?\n|\r/g);
+  const salt = new Uint8Array(lines[1].replace('salt:', '').split('-'));
+  const iv = new Uint8Array(lines[2].replace('iv:', '').split('-'));
+  const data = lines.splice(4).join('');
+  return { salt, iv, data };
 };
+
+/*
+Placeholder data to always have home some data to encrypt.
+This because on node decrypt seems to fail if there
+was no data when it was encrypted (Node.js v15.9.0)
+*/
+const placeholderData = 'classified.html\n';
 
 /*
 First derive key material from password and salt,
@@ -332,38 +316,6 @@ const getKey = async (password, salt) => {
   );
 };
 
-const toLines = (str) => {
-  const numLines = Math.ceil(str.length / DATA_LINE_LEN);
-  const lines = new Array(numLines);
-  for (let i = 0, start = 0; i < numLines; ++i, start += DATA_LINE_LEN) {
-    lines[i] = str.substr(start, DATA_LINE_LEN);
-  }
-  return lines.join('\n');
-};
-
-const arrayBufferToBase64 = (buf) => (
-  fromByteArray(new Uint8Array(buf))
-);
-
-const encryptionValuesToStrorableSring = (salt, iv, encrypted) => (
-  `salt:${salt.join('-')}\niv:${iv.join('-')}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}\n`
-);
-
-const encryptionValuesFromStroredSring = (str) => {
-  const lines = str.split(/\r?\n|\r/g);
-  const salt = new Uint8Array(lines[1].replace('salt:', '').split('-'));
-  const iv = new Uint8Array(lines[2].replace('iv:', '').split('-'));
-  const data = lines.splice(4).join('');
-  return { salt, iv, data };
-};
-
-/*
-Placeholder to always home some data to encrypt.
-This because on node decrypt seems to fail if there
-is no data to return (v15.9.0)
-*/
-const placeholder = 'classified.html\n';
-
 /*
 Derive a key from a password supplied by the user, and use the key
 to encrypt the message.
@@ -381,7 +333,7 @@ const encrypt = async (password, message) => {
       iv
     },
     key,
-    utf8Encoder.encode(placeholder + message)
+    utf8Encoder.encode(placeholderData + message)
   );
 
   return encryptionValuesToStrorableSring(salt, iv, encrypted);
@@ -410,102 +362,33 @@ const decrypt = async (password, data) => {
     );
 
     const dec = new TextDecoder('utf-8', { fatal: true });
-    const message = dec.decode(decrypted).slice(placeholder.length);
+    const message = dec.decode(decrypted).slice(placeholderData.length);
     return { data: message, success: true };
   } catch (e) {
     return { data: '', success: false };
   }
 };
 
+/*
+Remove the old data from source and insert new
+*/
 const updateSourceData = (source, data) => {
-  // remove the old data and insert new
   const sourceStart = source.split('const data' + ' = `')[0] + 'const data' + ' = `\n';
   const sourceEnd = '\`;// ' + 'data end' + source.split('\`;// ' + 'data end')[1];
   return sourceStart + data + sourceEnd;
 };
 
-if (typeof window === 'undefined') { // executed in Node.js
+if (!inBrowser()) { // executed in Node.js
+  /*
+   * Node.js specific code
+   */
+
   const fs = require('fs');
-  const path = require('path');
   const os = require('os');
   const readline = require('readline');
-
+  const path = require('path');
   const filename = path.basename(__filename);
-  const tmpPath = path.join(os.tmpdir(), filename);
-
-  /*
-  Ask question and wait for reply.
-  Allow using up/down arrows for prefilling options if given.
-  */
-  const question = (question, previous = []) => new Promise(resolve => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-
-    const maxPreviousIndex = previous.length - 1;
-    let previousIndex = -1;
-    const clearLine = () => rl.write(null, { ctrl: true, name: 'u' });
-    const detectArrow = (input) => {
-      if (input === '\u001b[A') { // arrow up
-        if (previousIndex < maxPreviousIndex) {
-          previousIndex++;
-          clearLine();
-          rl.write(previous[previousIndex]);
-        }
-      } else if (input === '\u001b[B') { // down arrow
-        if (previousIndex > -1) {
-          previousIndex--;
-          clearLine();
-          rl.write(previous[previousIndex]);
-        } else {
-          clearLine();
-        }
-      }
-    };
-
-    process.stdin.on('data', detectArrow);
-    rl.question(question, (reply) => {
-      process.stdin.removeListener('data', detectArrow);
-      rl.close();
-      resolve(reply);
-    });
-  });
-
-  const downloadEmpty = async (savePath) => {
-    if (savePath === undefined) {
-      const proposedDir = path.dirname(__filename) + path.sep;
-      let directory = await question(`save directory? [default: ${proposedDir}] `);
-      if (directory === '') directory = proposedDir;
-      if (!(directory.endsWith(path.sep))) directory += path.sep;
-      let name = await question('save name? ');
-      if (!(name.endsWith('.html'))) name += '.html';
-      savePath = directory + name;
-    }
-
-    try {
-      const source = fs.readFileSync(__filename, 'utf8');
-      fs.writeFileSync(savePath, updateSourceData(source, ''), { flag: 'wx' });
-      console.log(`${savePath} saved`);
-    } catch (err) {
-      console.log(`Could not save ${savePath}:\n${err}`);
-    }
-  };
-
-  (async () => {
-    // always clear the console on exit if exit has not been handled properly
-    let exitHandled = false;
-    process.on('exit', (code) => {
-      if (!exitHandled) {
-        console.clear();
-        console.log('possible changes discarded');
-      }
-      process.exit(code);
-    });
-
-    const args = process.argv.slice(2);
-    if (['-h', '--help', 'help'].includes(args[0])) {
-      console.log(`classified.html version ${VERSION}
+  const helpString = `classified.html version ${VERSION}
 Open in browser or with Node.js by running 'node ${filename}'
 
 
@@ -525,7 +408,7 @@ COMMANDS:
     help        show this help message
     exit        save and exit, same as the default when the command is left empty
     discard     discard changes, clear concole and quit, same as pressing ctrl+c
-  
+
 TARGETS:
   text          all of the text
   row ROWNUM    some spesific row of text, for example 'row 5'
@@ -537,108 +420,306 @@ Example usage:
   add text This is classified.html    append 'This is classified.html' row to text
   delete row 1                        delete the first row of text
   add value 'server key' 1234         add a new value '1234' with a key 'server key'
-  copy value 'server key'             copy value with a key 'server key' to the clipboard
-`);
-      exitHandled = true;
-      process.exit();
-    }
-    if (['-n', '--new', 'new'].includes(args[0])) {
-      await downloadEmpty(args[1]);
-      exitHandled = true;
-      process.exit();
-    }
+  copy value 'server key'             copy value with a key 'server key' to the clipboard`;
 
-    let password, decryptedData;
-    if (dataEmpty()) {
-      password = await pickPassword();
-      decryptedData = '';
-    } else if (password === undefined) {
-      let decryptionResult;
-      while (true) {
-        password = await prompt('enter password: ');
-        if (password === '') {
-          console.log('cannot be empty');
-          continue;
-        }
-        decryptionResult = await decrypt(password, data);
-        if (decryptionResult.success) break;
-        console.log('incorrect password');
-      }
-      decryptedData = decryptionResult.data;
-    }
+  // global variables to handle Node.js state
+  let password, decryptedData, newData;
 
-    console.clear();
-    console.log(decryptedData);
-    let newData = decryptedData.endsWith('\n') ? '' : '\n';
-    let newNewData;
+  /*
+  prompt from: https://github.com/ollipal/minimal-password-prompt
+  Allows reading user input so that it is hidden
+  */
+  const captureStdin = (onData) => {
+    process.stdin.setEncoding('utf-8');
+    process.stdin.setRawMode(true);
+    process.stdin.on('data', onData);
+    process.stdin.resume();
+  };
 
-    const printContents = () => {
+  const releaseStdin = (onData) => {
+    process.stdin.pause();
+    process.stdin.removeListener('data', onData);
+    process.stdin.setRawMode(false);
+    process.stdout.write('\n');
+  };
+
+  const prompt = (question, ctrlcExits = true) => (
+    new Promise((resolve, reject) => {
+      let input = '';
+      const onData = (data) => {
+        switch (data) {
+          case '\u000A': // \n
+          case '\u000D': // \r
+          case '\u0004': // Ctrl+D
+            releaseStdin(onData);
+            resolve(input);
+            break;
+          case '\u0003': // Ctrl+C
+            releaseStdin(onData);
+            ctrlcExits // exit or raise error
+              ? process.exit()
+              : reject(new Error('Ctrl+C'));
+            break;
+          case '\u0008': // Backspace
+          case '\u007F': // Delete
+            input = input.slice(0, -1);
+            break;
+          default: // any other
+            input += data;
+        };
+      };
+      captureStdin(onData);
+      process.stdout.write(question);
+    })
+  );
+
+  // always clear the console on exit if exit has not been marked to be handled properly
+  let exitHandled = false;
+  process.on('exit', (code) => {
+    if (!exitHandled) {
       console.clear();
-      console.log(decryptedData + newData);
-    };
+      console.log('possible changes discarded');
+    }
+    process.exit(code);
+  });
 
-    /*
-    Ask for new command and parse the response to command, target and value.
-    Use a list of previous commands as hints.
-    */
-    const parseCommand = async (previous) => {
-      const reply = await question("type 'help', enter a command or leave empty to exit: ", previous);
-      let [command, target, ...value] = reply.split(' ');
-      value = value.join(' ');
-      if (command === '') command = undefined;
-      if (value === '') value = undefined;
-      if (value === "''" || value === '""') value = '';
-      return [command, target, value];
-    };
+  /*
+  Ask for new command and parse the response to command, target and value.
+  Use a list of previous commands as hints.
+  */
+  const parseCommand = (input) => {
+    let [command, target, ...value] = input.split(' ');
+    value = value.join(' ');
+    if (command === '') command = undefined;
+    if (value === '') value = undefined;
+    if (value === "''" || value === '""') value = '';
+    return [command, target, value];
+  };
 
-    const addText = (value) => {
-      newNewData = value;
-      newData += newNewData + '\n';
-      printContents();
-    };
+  /*
+  Show the help string
+  */
+  const showHelp = () => console.log(helpString);
 
-    let previous = ['add text ', 'exit']; // hints
-    while (true) {
-      unknownCommand = false;
-      const [command, target, value] = await parseCommand(previous);
-      if (command === 'exit' || command === undefined) {
-        break;
-      } else if (command === 'add' && target === 'text' && value !== undefined) {
-        addText(value);
-      } else {
-        console.log('unknown command');
-        unknownCommand = true;
-      }
-
-      // prepend list of hints if value was used, and is different to the first one
-      if (!unknownCommand) {
-        const newPrevious = `${command} ${target ? target + ' ' : ''}`;
-        if (newPrevious !== previous[0]) previous = [newPrevious, ...previous];
-      }
+  /*
+  Download new empty classified.html to savePath. If savePath was not supplied, ask for it.
+  */
+  const downloadNew = async (savePath) => {
+    if (savePath === undefined) {
+      const proposedDir = path.dirname(__filename) + path.sep;
+      let directory = await question(`save directory? [default: ${proposedDir}] `);
+      if (directory === '') directory = proposedDir;
+      if (!(directory.endsWith(path.sep))) directory += path.sep;
+      let name = await question('save name? ');
+      if (!(name.endsWith('.html'))) name += '.html';
+      savePath = directory + name;
     }
 
-    // save if new data or first time
+    try {
+      const source = fs.readFileSync(__filename, 'utf8');
+      fs.writeFileSync(savePath, updateSourceData(source, ''), { flag: 'wx' });
+      console.log(`${savePath} saved`);
+    } catch (err) {
+      console.log(`Could not save ${savePath}:\n${err}`);
+    }
+  };
+
+  /*
+  Helper function to select a new password
+  */
+  const pickPassword = async () => {
+    let password, repassword;
+    while (true) {
+      password = await prompt('pick a password: ');
+      repassword = await prompt('re-enter password: ');
+      if (password === '') {
+        console.log('cannot be empty');
+        continue;
+      }
+      if (password === repassword) break;
+      console.log('passwords did not match, please try again:');
+    }
+    return password;
+  };
+
+  /*
+  Ask user password until the data has been encrypted successfully.
+  Return both the data and the password.
+  */
+  const decryptExistingData = async () => {
+    let decryptionResult, password;
+    while (true) {
+      password = await prompt('enter password: ');
+      if (password === '') {
+        console.log('cannot be empty');
+        continue;
+      }
+      decryptionResult = await decrypt(password, data);
+      if (decryptionResult.success) break;
+      console.log('incorrect password');
+    }
+    return [password, decryptionResult.data];
+  };
+
+  /*
+  Get or pick password and return existing decrypted data
+  */
+  const getPasswordAndData = async () => {
+    if (dataEmpty()) {
+      return [await pickPassword(), ''];
+    } else {
+      return await decryptExistingData();
+    }
+  };
+
+  /*
+  Ask question and wait for reply.
+  Allow using up/down arrows for prefilling options if given.
+  */
+  const question = (question, previous = []) => new Promise(resolve => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    const maxPreviousIndex = previous.length - 1;
+    let previousIndex = -1;
+    const clearLine = () => rl.write(null, { ctrl: true, name: 'u' });
+    const reactUpDown = (input) => {
+      if (input === '\u001b[A') { // arrow up
+        if (previousIndex < maxPreviousIndex) {
+          previousIndex++;
+          clearLine();
+          rl.write(previous[previousIndex]);
+        }
+      } else if (input === '\u001b[B') { // down arrow
+        if (previousIndex > -1) {
+          previousIndex--;
+          clearLine();
+          rl.write(previous[previousIndex]);
+        } else {
+          clearLine();
+        }
+      }
+    };
+
+    process.stdin.on('data', reactUpDown);
+    rl.question(question, (reply) => {
+      process.stdin.removeListener('data', reactUpDown);
+      rl.close();
+      resolve(reply);
+    });
+  });
+
+  /*
+  Save changes only if new data or first time.
+  Saving is done by writing data to a temporary file, and renaming it to the actual one.
+  */
+  const saveChanges = async (password, decryptedData, newData) => {
     if (newData !== '' || dataEmpty()) {
       // copy file to tmp file, and rename
       try {
+        const tmpPath = path.join(os.tmpdir(), filename);
         const source = fs.readFileSync(__filename, 'utf8');
         const updatedData = await encrypt(password, decryptedData + newData);
         const updatedSource = updateSourceData(source, updatedData);
         fs.writeFileSync(tmpPath, updatedSource);
         fs.renameSync(tmpPath, __filename);
-        console.clear();
         console.log('changes saved!');
-        exitHandled = true;
       } catch (err) {
         console.log(`Could not save ${__filename}:\n${err}`);
       };
     } else {
-      console.clear();
       console.log('no changes to save');
+    }
+  };
+
+  /*
+   * Command handling helpers:
+   */
+
+  const printContents = () => {
+    console.clear();
+    console.log(decryptedData + newData);
+  };
+
+  const addText = (value) => {
+    newData += value + '\n';
+    printContents();
+  };
+
+  /*
+   * Handle user command. Returns a boolean which tells was the command handled properly.
+   */
+  const handleCommand = async (command, target, value) => {
+    unknownCommand = false;
+    if (command === 'exit' || command === undefined) {
+      console.clear();
+      await saveChanges(password, decryptedData, newData);
       exitHandled = true;
+      process.exit();
+    } else if (command === 'add' && target === 'text' && value !== undefined) {
+      addText(value);
+    } else {
+      console.log('unknown command');
+      unknownCommand = true;
+    }
+    return !unknownCommand;
+  };
+
+  (async () => {
+    // parse commands passed through args
+    const [command, target, value] = parseCommand(process.argv.slice(2).join(' '));
+
+    // handle the cases whitch do not require password
+    if (['-h', '--help', 'help'].includes(command)) {
+      showHelp();
+      exitHandled = true;
+      process.exit();
+    }
+    if (['-n', '--new', 'new'].includes(command)) {
+      await downloadNew(args[1]);
+      exitHandled = true;
+      process.exit();
+    }
+
+    // select password, or decrypt data with the existing one
+    [password, decryptedData] = await getPasswordAndData();
+    // initialize new data
+    newData = decryptedData.endsWith('\n') ? '' : '\n';
+
+    // handle any other command that required password except exit
+    if (!['exit', undefined].includes(command)) {
+      const handled = await handleCommand(command, target, value);
+      console.clear();
+      if (handled) {
+        await saveChanges(password, decryptedData, newData);
+      } else {
+        console.log('error: could not handle command');
+      }
+      exitHandled = true;
+      process.exit();
+    }
+
+    let previous = ['add text ', 'exit']; // hints
+    while (true) {
+      printContents();
+      const reply = await question("type 'help', enter a command or leave empty to save and exit: ", previous);
+      const [command, target, value] = await parseCommand(reply);
+      const handled = await handleCommand(command, target, value); // this can exit the program
+
+      // prepend list of hints if values were used, and is different to the first one
+      if (handled) {
+        const newPrevious = `${command} ${target ? target + ' ' : ''}`;
+        if (newPrevious !== previous[0]) previous = [newPrevious, ...previous];
+      }
     }
   })();
 } else { // executed in Browser
+  /*
+   * Browser specific code
+   */
+
   const htmlTop = "//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><script>";
   const htmlBottom = '<\/script></body></html>';
   let filename = location.href.split('/').slice(-1)[0];
@@ -654,8 +735,8 @@ Example usage:
 <div id="form-div">
   <h2>classified.html</h2>
   <form id="form">
-    <input type="password" id="password" class="form-field" autocomplete="new-password" placeholder="pick a password">
-    <input type="password" id="repassword" class="form-field" autocomplete="new-password" placeholder="re-enter password">
+    <input type="password" id="password" class="form-field" autocomplete="new-password" placeholderData="pick a password">
+    <input type="password" id="repassword" class="form-field" autocomplete="new-password" placeholderData="re-enter password">
     <input type="submit" value="Create" id="form-submit">
   </form>
 </div>
