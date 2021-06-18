@@ -3,6 +3,7 @@
 
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
 <style>
 
 :root {
@@ -414,7 +415,6 @@ body {
 
   </style>
 </head>
-<meta name="viewport" content="width=device-width">
 <body>
 
 
@@ -621,9 +621,9 @@ This licence file is also available at https://github.com/google/material-design
       </svg>
     </div>
     <div class="nav-text">What is classified.html?</div>
-    <div class="nav-text">Download new empty</div>
+    <div class="nav-text" id="empty">Download new empty</div>
     <div class="nav-text hide-when-not-main">Check for updates</div>
-    <div class="nav-text hide-when-not-main">Change password</div>
+    <div class="nav-text hide-when-not-main" id="change">Change password</div>
     <div class="nav-text hide-when-not-main">Settings</div>
     <div class="nav-text" id="last-nav-text">v0.0.1 ollipal 2021</div>
   </div>
@@ -631,7 +631,7 @@ This licence file is also available at https://github.com/google/material-design
   <div id="values-container">
     <div id="values" class="data-sheet">
       <div class="title">Values</div>
-      <div id="text-div">TODO add value form</div>
+      <div>TODO add value form</div>
     </div>
   </div>
   <div id="text-container">
@@ -657,7 +657,7 @@ This licence file is also available at https://github.com/google/material-design
     
 */
     // show save when text is modified
-    document.getElementById("text").addEventListener("input", inputEvt => {
+    document.getElementById("text-div").addEventListener("input", inputEvt => {
       root.style.setProperty('--display-save', "inline")
     }, {once: true});
 
