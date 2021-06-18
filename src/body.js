@@ -210,6 +210,8 @@ Example usage:
   // global variables to handle Node.js state
   let password, decryptedData, newData;
   let passwordChanged = false;
+  let waitingForCommand = false;
+  let rl;
 
   /*
   prompt from: https://github.com/ollipal/minimal-password-prompt
@@ -259,14 +261,22 @@ Example usage:
     })
   );
 
+  // clear console, seems to work on all major platforms: https://stackoverflow.com/a/32899667 should be tested more
+  const clearConsole = () => process.stdout.write('\x1Bc');
+
   // always clear the console on exit if exit has not been marked to be handled properly
   let exitHandled = false;
   process.on('exit', (code) => {
     if (!exitHandled) {
-      console.clear();
+      clearConsole();
       console.log('possible changes discarded');
     }
     process.exit(code);
+  });
+
+  // write to global readline, if resized when waiting for a command
+  process.stdout.on('resize', () => {
+    if (waitingForCommand) rl.write('resize\n');
   });
 
   /*
@@ -361,9 +371,10 @@ Example usage:
   /*
   Ask question and wait for reply.
   Allow using up/down arrows for prefilling options if given.
+  rl can be written outside, if terminal is resized when waiting for command.
   */
   const question = (question, previous = []) => new Promise(resolve => {
-    const rl = readline.createInterface({
+    rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
@@ -441,7 +452,7 @@ Example usage:
   };
 
   const printContents = () => {
-    console.clear();
+    clearConsole();
     if (decryptedData + newData !== '\n') {
       const rows = (decryptedData + newData).split('\n');
       rows.shift(); // remove first
@@ -460,11 +471,10 @@ Example usage:
 
   const addText = (value) => {
     newData += value + '\n';
-    printContents();
   };
 
   const changePassword = async () => {
-    console.clear();
+    clearConsole();
     console.log('changing password:');
     password = await pickPassword();
     passwordChanged = true;
@@ -478,7 +488,7 @@ Example usage:
     let unknownCommand = false;
     let handleMessage;
     if (command === 'exit' || command === undefined) {
-      console.clear();
+      clearConsole();
       await saveChanges(password, decryptedData, newData);
       exitHandled = true;
       process.exit();
@@ -491,6 +501,7 @@ Example usage:
       process.exit(); // this will trigger on exit with exitHandled = false
     } else {
       unknownCommand = true;
+      handleMessage = 'unknown command';
     }
     return [!unknownCommand, handleMessage];
   };
@@ -519,7 +530,7 @@ Example usage:
     // handle any other command that required password except the default (exit)
     if (command !== undefined) {
       const [handled, message] = await handleCommand(command, target, value);
-      console.clear();
+      clearConsole();
       if (handled) {
         if (message) console.log(message);
         await saveChanges(password, decryptedData, newData);
@@ -535,7 +546,12 @@ Example usage:
     while (true) {
       printContents();
       if (message) console.log(message);
+      waitingForCommand = true;
       const reply = await question("type 'help', enter a command or leave empty to save and exit: ", previous);
+      waitingForCommand = false;
+      console.log(`reply: ${reply}`);
+      if (reply === 'resize') continue;
+
       const [command, target, value] = await parseCommand(reply);
       [handled, message] = await handleCommand(command, target, value); // this can exit the program
 
