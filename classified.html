@@ -639,9 +639,38 @@ Example usage:
   Command handling helpers:
   */
 
+  const minRowLen = 58; // note, can be shorter if the terminal is shorter
+
+  // return text padded with spaces, bolded, white and with black background
+  const title = (str, len) => `\x1b[1m\x1b[37m\x1b[40m  ${str.padEnd(len - 2)}\x1b[0m`;
+
+  // append input with a cyan row number and space, normal text to black and background to white
+  const row = (str, len, num) => {
+    numStr = String(num).padEnd(2);
+    if (str.length < len - numStr.length) {
+      return `\x1b[36m\x1b[47m${numStr}\x1b[30m\x1b[47m${str.padEnd(len - numStr.length)}\x1b[0m`;
+    } else {
+      const fillerSpaces = ' '.repeat(process.stdout.columns - (numStr + str).length % process.stdout.columns);
+      return `\x1b[36m\x1b[47m${numStr}\x1b[30m\x1b[47m${str}${fillerSpaces}\x1b[0m`;
+    }
+  };
+
   const printContents = () => {
     console.clear();
-    if (decryptedData + newData !== '\n') console.log(decryptedData + newData);
+    if (decryptedData + newData !== '\n') {
+      const rows = (decryptedData + newData).split('\n');
+      rows.shift(); // remove first
+      rows.pop(); // remove last TODO why these are needed?
+      const longestRowLen = rows.reduce((a, b) => a.length > b.length ? a : b).length;
+      const printWidth = Math.min(Math.max(longestRowLen + 3, minRowLen), process.stdout.columns);
+      console.log(title('Text', printWidth));
+      let textContents = '';
+      for (let rowNum = 0; rowNum < rows.length; rowNum++) {
+        textContents += row(rows[rowNum], printWidth, rowNum + 1) + '\n';
+      }
+      textContents += row('', printWidth, ' ');
+      console.log(textContents);
+    }
   };
 
   const addText = (value) => {
