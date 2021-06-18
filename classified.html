@@ -495,16 +495,16 @@ Example usage:
   });
 
   /*
-  Ask for new command and parse the response to command, target and value.
+  Ask for new command and parse the response to command, target and data.
   Use a list of previous commands as hints.
   */
   const parseCommand = (input) => {
-    let [command, target, ...value] = input.split(' ');
-    value = value.join(' ');
+    let [command, target, ...commandData] = input.split(' ');
+    commandData = commandData.join(' ');
     if (command === '') command = undefined;
-    if (value === '') value = undefined;
-    if (value === "''" || value === '""') value = '';
-    return [command, target, value];
+    if (commandData === '') commandData = undefined;
+    if (commandData === "''" || commandData === '""') commandData = '';
+    return [command, target, commandData];
   };
 
   /*
@@ -679,8 +679,8 @@ Example usage:
     }
   };
 
-  const addText = (value) => {
-    newData += value + '\n';
+  const addText = (commandData) => {
+    newData += commandData + '\n';
   };
 
   const changePassword = async () => {
@@ -694,7 +694,7 @@ Example usage:
   Handle user command. Returns a boolean which tells was the command handled properly
   and a message that should be logged.
   */
-  const handleCommand = async (command, target, value) => {
+  const handleCommand = async (command, target, commandData) => {
     let unknownCommand = false;
     let handleMessage;
     if (command === 'exit' || command === undefined) {
@@ -708,21 +708,21 @@ Example usage:
       handleMessage = await downloadNew(target);
     } else if (command === 'help') {
       handleMessage = helpString + '\n';
-    } else if (command === 'add' && target === 'text' && value !== undefined) {
-      addText(value);
+    } else if (command === 'add' && target === 'text' && commandData !== undefined) {
+      addText(commandData);
     } else if (command === 'password') {
       await changePassword();
       handleMessage = 'password changed successfully';
     } else {
       unknownCommand = true;
-      handleMessage = 'unknown command';
+      handleMessage = `command did not work: COMMAND: ${command}, TARGET: ${target}, DATA: ${commandData}`;
     }
     return [!unknownCommand, handleMessage];
   };
 
   (async () => {
     // parse commands passed through args
-    const [command, target, value] = parseCommand(process.argv.slice(2).join(' '));
+    const [command, target, commandData] = parseCommand(process.argv.slice(2).join(' '));
 
     // handle the cases whitch do not require password
     if (['-h', '--help', 'help'].includes(command)) {
@@ -743,7 +743,7 @@ Example usage:
 
     // handle any other command that required password except the default (exit)
     if (command !== undefined) {
-      const [handled, message] = await handleCommand(command, target, value);
+      const [handled, message] = await handleCommand(command, target, commandData);
       clearConsole();
       if (handled) {
         if (message) console.log(message);
@@ -766,10 +766,10 @@ Example usage:
       console.log(`reply: ${reply}`);
       if (reply === 'resize') continue;
 
-      const [command, target, value] = await parseCommand(reply);
-      [handled, message] = await handleCommand(command, target, value); // this can exit the program
+      const [command, target, commandData] = await parseCommand(reply);
+      [handled, message] = await handleCommand(command, target, commandData); // this can exit the program
 
-      // prepend list of hints if values were used, and is different to the first one
+      // prepend list of hints if command was handled, and is different to the first one
       if (handled) {
         const newPrevious = `${command} ${target ? target + ' ' : ''}`;
         if (newPrevious !== previous[0]) previous = [newPrevious, ...previous];
