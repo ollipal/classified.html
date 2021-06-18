@@ -293,11 +293,6 @@ Example usage:
   };
 
   /*
-  Show the help string
-  */
-  const showHelp = () => console.log(helpString);
-
-  /*
   Download new empty classified.html to savePath. If savePath was not supplied, ask for it.
   */
   const downloadNew = async (savePath) => {
@@ -314,9 +309,9 @@ Example usage:
     try {
       const source = fs.readFileSync(__filename, 'utf8');
       fs.writeFileSync(savePath, updateSourceData(source, ''), { flag: 'wx' });
-      console.log(`${savePath} saved`);
+      return `${savePath} saved`;
     } catch (err) {
-      console.log(`Could not save ${savePath}:\n${err}`);
+      return `Could not save ${savePath}:\n${err}`;
     }
   };
 
@@ -492,13 +487,17 @@ Example usage:
       await saveChanges(password, decryptedData, newData);
       exitHandled = true;
       process.exit();
+    } else if (command === 'discard') {
+      process.exit(); // this will trigger on exit with exitHandled = false
+    } else if (command === 'new') {
+      handleMessage = await downloadNew(target);
+    } else if (command === 'help') {
+      handleMessage = helpString + '\n';
     } else if (command === 'add' && target === 'text' && value !== undefined) {
       addText(value);
     } else if (command === 'password') {
       await changePassword();
       handleMessage = 'password changed successfully';
-    } else if (command === 'discard') {
-      process.exit(); // this will trigger on exit with exitHandled = false
     } else {
       unknownCommand = true;
       handleMessage = 'unknown command';
@@ -512,12 +511,12 @@ Example usage:
 
     // handle the cases whitch do not require password
     if (['-h', '--help', 'help'].includes(command)) {
-      showHelp();
+      console.log(helpString);
       exitHandled = true;
       process.exit();
     }
     if (['-n', '--new', 'new'].includes(command)) {
-      await downloadNew(args[1]);
+      console.log(await downloadNew(target));
       exitHandled = true;
       process.exit();
     }
