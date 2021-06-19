@@ -419,7 +419,7 @@ TARGETS:
 Example usage:
   add text This is classified.html    append 'This is classified.html' row to text
   delete row 1                        delete the first row of text
-  add value 'server key' 1234         add value '1234' with a key 'server key' to values
+  add value 'server key' 1 2 3         add value '1 2 3' with a key 'server key' to values
   copy value 'server key'             copy value with a key 'server key' to the clipboard`;
 
   // global variables to handle Node.js state
@@ -427,6 +427,7 @@ Example usage:
   let passwordChanged = false;
   let waitingForCommand = false;
   let rl;
+  const values = {};
 
   /*
   prompt from: https://github.com/ollipal/minimal-password-prompt
@@ -650,6 +651,17 @@ Example usage:
   // return text padded with spaces, bolded, white and with black background
   const title = (str, len) => `\x1b[1m\x1b[37m\x1b[40m  ${str.padEnd(len - 2)}\x1b[0m`;
 
+  // return value padded with spaces, bolded, white and with black background and cut to max length of the terminal
+  const value = (key, value, len) => {
+    if ((key + value).length <= len - 3) {
+      return `\x1b[30m\x1b[47m ${key.padEnd(len - value.length - 2)}${'*'.repeat(value.length)} \x1b[0m`;
+    } else if (process.stdout.columns - key.length - 6 >= 0) {
+      return `\x1b[30m\x1b[47m ${key} ${'*'.repeat(process.stdout.columns - key.length - 6)}... \x1b[0m`;
+    } else if (process.stdout.columns > 4) {
+      return `\x1b[30m\x1b[47m${(' ' + key).substr(0, process.stdout.columns - 4)}... \x1b[0m`;
+    }
+  };
+
   // append input with a cyan row number and space, normal text to black and background to white
   const row = (str, len, num) => {
     numStr = String(num).padEnd(2);
@@ -661,14 +673,45 @@ Example usage:
     }
   };
 
-  const printContents = () => {
-    clearConsole();
+  const getPrintWidth = () => {
+    let maxValuePrintLen = 0;
+    Object.keys(values)
+      .forEach((v, _) => {
+        const len = v.length + values[v].length + 3; // 3 because at least one space in between and padding on both sides
+        if (len > maxValuePrintLen) maxValuePrintLen = len;
+      });
+
+    let longestRowLen = 0;
     if (decryptedData + newData !== '\n') {
       const rows = (decryptedData + newData).split('\n');
       rows.shift(); // remove first
       rows.pop(); // remove last TODO why these are needed?
-      const longestRowLen = rows.reduce((a, b) => a.length > b.length ? a : b).length;
-      const printWidth = Math.min(Math.max(longestRowLen + 3, minRowLen), process.stdout.columns);
+      longestRowLen = rows.reduce((a, b) => a.length > b.length ? a : b).length + 3; // 3 because padding start and end
+    }
+
+    return Math.min(Math.max(maxValuePrintLen, longestRowLen, minRowLen), process.stdout.columns);
+  };
+
+  const printContents = () => {
+    clearConsole();
+    const printWidth = getPrintWidth();
+
+    if (Object.keys(values).length !== 0) {
+      console.log(title('Values', printWidth));
+      let textContents = '';
+      Object.keys(values)
+        .sort()
+        .forEach((v, _) => {
+          textContents += value(v, values[v], printWidth) + '\n';
+        });
+      textContents += value('', '', printWidth) + '\n';
+      console.log(textContents);
+    }
+
+    if (decryptedData + newData !== '\n') {
+      const rows = (decryptedData + newData).split('\n');
+      rows.shift(); // remove first
+      rows.pop(); // remove last TODO why these are needed?
       console.log(title('Text', printWidth));
       let textContents = '';
       for (let rowNum = 0; rowNum < rows.length; rowNum++) {
@@ -681,6 +724,36 @@ Example usage:
 
   const addText = (commandData) => {
     newData += commandData + '\n';
+  };
+
+  const addValue = async (commandData) => {
+    let key, value;
+    // parse key
+    if (commandData.startsWith('"') && commandData.split('"').length >= 3) {
+      key = commandData.split('"')[1];
+      value = commandData.slice(key.length + 3); // 2 x quotes + space = 3
+    } else if (commandData.startsWith("'") && commandData.split("'").length >= 3) {
+      key = commandData.split("'")[1];
+      value = commandData.slice(key.length + 3); // 2 x quotes + space = 3
+    } else if (commandData.split(' ').length >= 2) {
+      key = commandData.split(' ')[0];
+      value = commandData.slice(key.length + 1); // 1 x space = 1
+    } else {
+      key = commandData;
+    }
+    // check for duplicate
+    if (key in values) {
+      return `error: ${key} already in values, delete first if you want to replace`;
+    }
+
+    // get value if not present
+    if (!value) {
+      value = await prompt(`value for key ${key}: `);
+    }
+
+    // add value
+    values[key] = value;
+    return `value for ${key} added`;
   };
 
   const changePassword = async () => {
@@ -708,8 +781,11 @@ Example usage:
       handleMessage = await downloadNew(target);
     } else if (command === 'help') {
       handleMessage = helpString + '\n';
+    } else if (command === 'add' && target === 'value' && commandData !== undefined) {
+      handleMessage = await addValue(commandData);
     } else if (command === 'add' && target === 'text' && commandData !== undefined) {
       addText(commandData);
+      handleMessage = 'new row added';
     } else if (command === 'password') {
       await changePassword();
       handleMessage = 'password changed successfully';
@@ -755,7 +831,7 @@ Example usage:
       process.exit();
     }
 
-    let previous = ['add text ', 'exit']; // hints
+    let previous = ['add value ', 'add text ', 'exit', 'discard']; // hints
     let handled, message;
     while (true) {
       printContents();
@@ -763,7 +839,6 @@ Example usage:
       waitingForCommand = true;
       const reply = await question("type 'help', enter a command or leave empty to save and exit: ", previous);
       waitingForCommand = false;
-      console.log(`reply: ${reply}`);
       if (reply === 'resize') continue;
 
       const [command, target, commandData] = await parseCommand(reply);
