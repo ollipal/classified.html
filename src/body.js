@@ -163,6 +163,88 @@ const updateSourceData = (source, data) => {
   return sourceStart + data + sourceEnd;
 };
 
+/*
+Encode values and text into a spesific format, which is later decodeable.
+
+The format is designed to work without limiting any characters from the input
+and without needing to handle escaping characters. This is done by saving lengths of
+text and each value. It can also handle skipping unknown sections.
+
+header:
+- start with header length, each section is separated by '&'
+- each section starts with the section name, and is followed by part lengths, separated by '|'
+
+body:
+- concatonates all data together without separations. Can be splitted according to the header part lengths.
+
+example:
+values: [key1, value1], [key2, value2] text: 'example_text'
+encoded: 22&values|4|6|4|6&text|13key1value1key2value2example_text
+*/
+const encode = (values, text) => {
+  let header = '';
+  let body = '';
+
+  // append values info to header and key + value pairs to body
+  header += 'values';
+  Object.keys(values)
+    .sort()
+    .forEach((key, _) => {
+      header += `|${key.length}|${values[key].length}`;
+      body += `${key}${values[key]}`;
+    });
+
+  // append text info to header and actual text to body
+  header += '&text';
+  header += `|${text.length}`;
+  body += `${text}`;
+
+  // prepend header with the header length
+  header = `${header.length}&${header}`;
+
+  // return encoded
+  return header + body;
+};
+
+/*
+Decode values and text from input. See explanation form 'encode'.
+*/
+const decode = (input) => {
+  let text = '';
+  const values = {};
+
+  // separate headersections form the body
+  const headerLen = Number(input.substring(0, input.indexOf('&')));
+  const headerSectionsArray = input.substring(input.indexOf('&') + 1, headerLen + String(headerLen).length + 1).split('&');
+  const body = input.substring(input.indexOf('&') + 1 + headerLen, input.length);
+
+  // parse each header section, read the parts from the body and do operations based on the name at the start
+  let bodyReadPos = 0;
+  for (const section of headerSectionsArray) {
+    const [name, ...lengths] = section.split('|');
+    const parts = lengths.map(len => {
+      const part = body.substring(bodyReadPos, bodyReadPos + Number(len));
+      bodyReadPos += Number(len);
+      return part;
+    });
+
+    switch (name) {
+      case 'values':
+        for (i = 0; i < parts.length; i += 2) {
+          values[parts[i]] = parts[i + 1];
+        }
+        break;
+      case 'text':
+        text += parts[0];
+        break;
+      default:
+        console.log(`Unknown header section: ${name}`);
+    };
+  }
+
+  return [values, text];
+};
+
 if (!inBrowser()) { // executed in Node.js
   /*
    * Node.js specific code
@@ -209,10 +291,10 @@ Example usage:
 
   // global variables to handle Node.js state
   let password, decryptedData, newData;
-  let passwordChanged = false;
+  let changes = false;
   let waitingForCommand = false;
   let rl;
-  const values = {};
+  let values;
 
   /*
   prompt from: https://github.com/ollipal/minimal-password-prompt
@@ -350,7 +432,7 @@ Example usage:
       if (decryptionResult.success) break;
       console.log('incorrect password');
     }
-    return [password, decryptionResult.data];
+    return [password, await decode(decryptionResult.data)];
   };
 
   /*
@@ -358,7 +440,7 @@ Example usage:
   */
   const getPasswordAndData = async () => {
     if (dataEmpty()) {
-      return [await pickPassword(), ''];
+      return [await pickPassword(), [{}, '']];
     } else {
       return await decryptExistingData();
     }
@@ -405,16 +487,16 @@ Example usage:
   });
 
   /*
-  Save changes only if new data, first time or password changed.
+  Save changes if a new file or changes
   Saving is done by writing data to a temporary file, and renaming it to the actual one.
   */
   const saveChanges = async (password, decryptedData, newData) => {
-    if (newData !== '' || dataEmpty() || passwordChanged) {
+    if (dataEmpty() || changes) {
       // copy file to tmp file, and rename
       try {
         const tmpPath = path.join(os.tmpdir(), filename);
         const source = fs.readFileSync(__filename, 'utf8');
-        const updatedData = await encrypt(password, decryptedData + newData);
+        const updatedData = await encrypt(password, await encode(values, decryptedData + newData));
         const updatedSource = updateSourceData(source, updatedData);
         fs.writeFileSync(tmpPath, updatedSource);
         fs.renameSync(tmpPath, __filename);
@@ -461,15 +543,15 @@ Example usage:
   const getPrintWidth = () => {
     let maxValuePrintLen = 0;
     Object.keys(values)
-      .forEach((v, _) => {
-        const len = v.length + values[v].length + 3; // 3 because at least one space in between and padding on both sides
+      .forEach((key, _) => {
+        const len = key.length + values[key].length + 3; // 3 because at least one space in between and padding on both sides
         if (len > maxValuePrintLen) maxValuePrintLen = len;
       });
 
     let longestRowLen = 0;
     if (decryptedData + newData !== '\n') {
       const rows = (decryptedData + newData).split('\n');
-      rows.shift(); // remove first
+      // rows.shift(); // remove first TODO fix
       rows.pop(); // remove last TODO why these are needed?
       longestRowLen = rows.reduce((a, b) => a.length > b.length ? a : b).length + 3; // 3 because padding start and end
     }
@@ -486,8 +568,8 @@ Example usage:
       let textContents = '';
       Object.keys(values)
         .sort()
-        .forEach((v, _) => {
-          textContents += value(v, values[v], printWidth) + '\n';
+        .forEach((key, _) => {
+          textContents += value(key, values[key], printWidth) + '\n';
         });
       textContents += value('', '', printWidth) + '\n';
       console.log(textContents);
@@ -495,7 +577,7 @@ Example usage:
 
     if (decryptedData + newData !== '\n') {
       const rows = (decryptedData + newData).split('\n');
-      rows.shift(); // remove first
+      // rows.shift(); // remove first TODO fix
       rows.pop(); // remove last TODO why these are needed?
       console.log(title('Text', printWidth));
       let textContents = '';
@@ -508,6 +590,7 @@ Example usage:
   };
 
   const addText = (commandData) => {
+    changes = true;
     newData += commandData + '\n';
   };
 
@@ -538,6 +621,7 @@ Example usage:
 
     // add value
     values[key] = value;
+    changes = true;
     return `value for ${key} added`;
   };
 
@@ -545,7 +629,7 @@ Example usage:
     clearConsole();
     console.log('changing password:');
     password = await pickPassword();
-    passwordChanged = true;
+    changes = true;
   };
 
   /*
@@ -598,7 +682,7 @@ Example usage:
     }
 
     // select password, or decrypt data with the existing one
-    [password, decryptedData] = await getPasswordAndData();
+    [password, [values, decryptedData]] = await getPasswordAndData();
     // initialize new data
     newData = decryptedData.endsWith('\n') ? '' : '\n';
 
@@ -1389,9 +1473,11 @@ body {
         alert('Incorrect password');
         form.password.value = '';
       } else {
+        const [values, text] = await decode(decryptionResult.data);
         formSubmit.removeEventListener('click', enterPassword);
         currentPassword = password;
-        showDecrypted(decryptionResult.data);
+        console.log(values); // TODO save and use
+        showDecrypted(text);
       }
     };
 
@@ -1413,7 +1499,7 @@ body {
     });
 
     saveButton.addEventListener('click', async (_) => {
-      await obtainFile(await encrypt(currentPassword, dataInput.innerText), filename);
+      await obtainFile(await encrypt(currentPassword, await encode({}, dataInput.innerText)), filename); // TODO use the actual values
 
       // reset saving functionality, user might continue use after save
       setProperty('--display-save', 'none');
