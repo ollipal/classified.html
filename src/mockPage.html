@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <style>
-
+/*CSS*/
 :root {
   /*State*/
   --display-form: inline-block;
@@ -412,15 +412,62 @@ body {
 #navbar:hover .hide-when-not-main {
   display: var(--display-main);
 }
-
+/*CSS*/
   </style>
 </head>
 <body>
+<!--HTML-->
+<div id="form-div">
+  <h2>classified.html</h2>
+  <form id="form">
+    <input type="password" id="password" class="form-field" autocomplete="new-password" placeholder="pick a password">
+    <input type="password" id="repassword" class="form-field" autocomplete="new-password" placeholder="re-enter password">
+    <input type="submit" value="Create" id="form-submit">
+  </form>
+</div>
+<div id=spacer></div>
 
+<div class="grid">
+  <div id="navbar">
+    <div id="menu">
+      <!--Menu-svg-->
+      <svg height="32px" width="32px" viewBox="0 0 24 24" fill="none">
+        <path d="M0 0h24v24H0V0z" fill="none"/>
+        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill="currentColor"/>
+      </svg>
+    </div>
+    <div class="nav-text">What is classified.html?</div>
+    <div class="nav-text" id="empty">Download new empty</div>
+    <div class="nav-text hide-when-not-main">Check for updates</div>
+    <div class="nav-text hide-when-not-main" id="change">Change password</div>
+    <div class="nav-text hide-when-not-main">Settings</div>
+    <div class="nav-text" id="last-nav-text">v0.0.1 ollipal 2021</div>
+  </div>
 
-<!--
+  <div id="values-container">
+    <div id="values" class="data-sheet">
+      <div class="title">Values</div>
+      <div>TODO add value form</div>
+    </div>
+  </div>
+  <div id="text-container">
+    <div id="text" class="data-sheet">
+      <div class="title">Text</div>
+      <div id="text-div" contenteditable="true">Content</div>
+    </div>
+  </div>
+</div>
+
+<div class="save-container">
+  <button id="save">save changes</button>
+</div>
+<!--HTML-->
+  <script defer="defer">
+/*
+SVG-TERMS
 All of the svg logos used in this project are taken from Googles material-design-icons project.
 This licence file is also available at https://github.com/google/material-design-icons/blob/master/LICENSE
+
 
                                  Apache License
                            Version 2.0, January 2004
@@ -598,63 +645,7 @@ This licence file is also available at https://github.com/google/material-design
       of your accepting any such warranty or additional liability.
 
    END OF TERMS AND CONDITIONS
--->
-
-<div id="form-div">
-  <h2>classified.html</h2>
-  <form id="form">
-    <input type="password" id="password" class="form-field" autocomplete="new-password" placeholder="pick a password">
-    <input type="password" id="repassword" class="form-field" autocomplete="new-password" placeholder="re-enter password">
-    <input type="submit" value="Create" id="form-submit">
-  </form>
-</div>
-<div id=spacer></div>
-
-<div class="grid">
-  <div id="navbar">
-    <div id="menu">
-      <!-- <span class="logo-text">classified.html</span> -->
-      <!--Menu-svg-->
-      <svg height="32px" width="32px" viewBox="0 0 24 24" fill="none">
-        <path d="M0 0h24v24H0V0z" fill="none"/>
-        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill="currentColor"/>
-      </svg>
-    </div>
-    <div class="nav-text">What is classified.html?</div>
-    <div class="nav-text" id="empty">Download new empty</div>
-    <div class="nav-text hide-when-not-main">Check for updates</div>
-    <div class="nav-text hide-when-not-main" id="change">Change password</div>
-    <div class="nav-text hide-when-not-main">Settings</div>
-    <div class="nav-text" id="last-nav-text">v0.0.1 ollipal 2021</div>
-  </div>
-
-  <div id="values-container">
-    <div id="values" class="data-sheet">
-      <div class="title">Values</div>
-      <div>TODO add value form</div>
-    </div>
-  </div>
-  <div id="text-container">
-    <div id="text" class="data-sheet">
-      <div class="title">Text</div>
-      <div id="text-div" contenteditable="true">Content</div>
-    </div>
-  </div>
-</div>
-
-<div class="save-container">
-  <button id="save">save changes</button>
-</div>
-
-  <script defer="defer">
-    //document.getElementsByTagName('body')[0].innerHTML = ``
-
-    /*function resetHeight(){
-      root.style.setProperty('--inner-height', window.innerHeight + "px");
-    }
-    // reset the height whenever the window's resized
-    window.addEventListener("resize", resetHeight);
-    
+SVG-TERMS
 */
     // show save when text is modified
     document.getElementById("text-div").addEventListener("input", inputEvt => {
