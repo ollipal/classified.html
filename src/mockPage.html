@@ -52,6 +52,7 @@ body {
   background-color: var(--col-primary);
 }
 ::selection {
+  color: var(--col-secondary);
   background: var(--col-primary);
 }
 
@@ -99,7 +100,39 @@ body {
 
 #form-submit:hover {
   padding: 5px;
+  background-color: var(--col-secondary);
+  color: var(--col-primary);
+}
+
+#values-form {
+  height: 6rem;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px;overflow-wrap: anywhere
+}
+
+#values-form input {
+  text-align: left;
+  margin: 1rem;
+}
+
+#values-add {
+  text-align: center !important;
+  padding: 0;
+  height: 3rem;
+  width: 12rem;
   border: 1px solid var(--col-primary);
+  color: var(--col-secondary);
+  font-weight: bold;
+  background-color: var(--col-primary);
+  font-family: 'Courier New', Courier, monospace;
+  cursor: pointer;
+  transition: 100ms ease;
+}
+
+#values-add:hover {
   background-color: var(--col-secondary);
   color: var(--col-primary);
 }
@@ -447,13 +480,17 @@ body {
   <div id="values-container">
     <div id="values" class="data-sheet">
       <div class="title">Values</div>
-      <div>TODO add value form</div>
+      <form id="values-form" autocomplete="off">
+        <input type="text" id="values-key" class="form-field" autocomplete="off" placeholder="key">
+        <input type="password" id="values-value" class="form-field" autocomplete="new-password" placeholder="value">
+        <input type="submit" value="Add" id="values-add">
+      </form>
     </div>
   </div>
   <div id="text-container">
     <div id="text" class="data-sheet">
       <div class="title">Text</div>
-      <div id="text-div" contenteditable="true">Content</div>
+      <div id="text-div" contenteditable="true" placeholder="type here"></div>
     </div>
   </div>
 </div>
