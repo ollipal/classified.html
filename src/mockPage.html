@@ -121,8 +121,8 @@ body {
 #values-add {
   text-align: center !important;
   padding: 0;
-  height: 3rem;
-  width: 12rem;
+  height: 2.5rem;
+  width: 14rem;
   border: 1px solid var(--col-primary);
   color: var(--col-secondary);
   font-weight: bold;
@@ -296,9 +296,9 @@ body {
 }
 
 #save:hover{
-  width: 33%;
-  line-height: 4.5rem;
-  min-width: 250px;
+  width: 32%;
+  line-height: 4.2rem;
+  min-width: 220px;
   border: 1px solid var(--col-primary);
   background-color: var(--col-secondary);
   color: var(--col-primary);
@@ -445,6 +445,12 @@ body {
 #navbar:hover .hide-when-not-main {
   display: var(--display-main);
 }
+
+[contenteditable=true][placeholder]:empty:before{
+  content:attr(placeholder);
+  color:var(--col-tertiary)
+}
+
 /*CSS*/
   </style>
 </head>
@@ -490,7 +496,7 @@ body {
   <div id="text-container">
     <div id="text" class="data-sheet">
       <div class="title">Text</div>
-      <div id="text-div" contenteditable="true" placeholder="type here"></div>
+      <div id="text-div" contenteditable="true" placeholder="type here..."></div>
     </div>
   </div>
 </div>
