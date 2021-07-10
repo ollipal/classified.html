@@ -189,6 +189,7 @@ body {
   display: none;
   white-space:nowrap;
   padding-left: 3rem;
+  user-select: none;
 }
 
 .nav-text:last-child {
@@ -258,9 +259,6 @@ body {
 
 #navbar:hover .nav-text {
   display: inline;
-}
-
-#navbar:hover .nav-text {
   transition: var(--transition-speed);
 }
 
@@ -353,7 +351,8 @@ body {
       'values-container'
       'text-container'
       'navbar-container';
-    overflow: hidden;
+    min-height: 100vh;
+    overflow-x: auto;
   }
 
   #text {
@@ -377,18 +376,36 @@ body {
     position: unset;
     background-color: var(--col-secondary);
     transition: none;
+    background-color: transparent;
+    width: auto;
+  }
+
+  #navbar:hover {
+    box-shadow: none;
+    background-color: transparent;
+    width: auto;
   }
 
   .nav-text {
     display: inline;
-    padding: 0;
     color: var(--col-tertiary);
     background-color: var(--col-quaternary);
     margin: auto;
     line-height: 3rem;
     height: 3rem;
     text-align: center;
-    width: 100vw;
+    width: 100%;
+    left: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  #nav-text-spacer {
+    margin-top: auto;
+  }
+
+  .nav-text:last-child{
+    margin-top: 0;
   }
 
   #last-nav-text {
@@ -396,19 +413,8 @@ body {
     background-color: var(--col-quaternary);
   }
 
-  #navbar:hover .nav-text {
-    left: 0;
-    padding: 0;
-    margin: 0;
-  }
-
   #menu {
     height: 3rem;
-  }
-
-  #navbar:hover {
-    width: 100vw;
-    box-shadow: none;
   }
 
   .title {
@@ -430,8 +436,7 @@ body {
   }
 
   #spacer {
-    height: calc(100% - 3*3rem - 5px);/*without 5px scrolls for some reason...*/
-    display: var(--display-form);
+    display: none;
   }
 
   #menu{
@@ -480,6 +485,7 @@ body {
         <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill="currentColor"/>
       </svg>
     </div>
+    <div id="nav-text-spacer"></div>
     <div class="nav-text">What is classified.html?</div>
     <div class="nav-text" id="empty">Download new empty</div>
     <div class="nav-text hide-when-not-main">Check for updates</div>
