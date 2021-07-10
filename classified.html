@@ -1197,6 +1197,7 @@ This licence file is also available at https://github.com/google/material-design
   --col-primary: #000000;
   --col-secondary: #ffffff;
   --col-tertiary: #919191;
+  --col-quaternary: #fcfcfc;
   --transition-speed: 150ms;
 }
 
@@ -1213,6 +1214,7 @@ body {
   font-family: 'Courier New', Courier, monospace;
   margin: 0px;
   height: 100%;
+  background-color: var(--col-quaternary);
 }
 
 /* Firefox scrollbar */
@@ -1262,6 +1264,7 @@ body {
   outline: none;
   font-family: 'Courier New', Courier, monospace;
   padding-bottom: 5px;
+  background-color: transparent;
 }
 
 #form-submit {
@@ -1324,6 +1327,7 @@ body {
 .grid {
   display: grid;
   margin: 0;
+  background-color: var(--col-quaternary);
 }
 
 #navbar {
@@ -1534,11 +1538,11 @@ body {
 
   #text {
     margin: 1rem;
-    min-height: 80vh;
   }
 
   #text-div {
     padding: 15px;
+    min-height: 6rem;
   }
 
   #values {
@@ -1559,6 +1563,7 @@ body {
     display: inline;
     padding: 0;
     color: var(--col-tertiary);
+    background-color: var(--col-quaternary);
     margin: auto;
     line-height: 3rem;
     height: 3rem;
@@ -1568,8 +1573,8 @@ body {
 
   #last-nav-text {
     color: var(--col-tertiary);
+    background-color: var(--col-quaternary);
   }
-
 
   #navbar:hover .nav-text {
     left: 0;
