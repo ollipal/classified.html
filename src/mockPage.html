@@ -734,6 +734,8 @@ SVG-TERMS
           console.log("ok");
         }
         root.style.setProperty('--display-repw', "none");
+        form.password.placeholder = 'enter password';
+        formSubmit.value = 'Open';
       }else if (root.style.getPropertyValue('--display-repw') === "none"){
         if (password === "") {
           console.log("not ok");
