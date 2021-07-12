@@ -14,7 +14,7 @@
   --display-save: none;
   --inner-height: 100vh; /*temporary*/
   /*Theme*/
-  --col-primary: #000000;
+  --col-primary: #252525;
   --col-secondary: #ffffff;
   --col-tertiary: #919191;
   --col-quaternary: #fcfcfc;
@@ -35,6 +35,7 @@ body {
   margin: 0px;
   height: 100%;
   background-color: var(--col-quaternary);
+  color: var(--col-primary);
 }
 
 h2 {
@@ -89,6 +90,7 @@ h2 {
   font-family: 'Courier New', Courier, monospace;
   padding-bottom: 5px;
   background-color: transparent;
+  color: var(--col-primary);
 }
 
 #form-submit {
@@ -749,10 +751,12 @@ SVG-TERMS
     const keyValuePairs = document.getElementById("key-value-pairs");
 
     const root = document.documentElement;
-    //root.style.setProperty('--display-repw', "inline"); // explicitly set
-    root.style.setProperty('--display-form', "none");
-    root.style.setProperty('--display-repw', "none");
-    root.style.setProperty('--display-main', "inline");
+    root.style.setProperty('--display-repw', "inline"); // explicitly set
+
+    // uncomment these to skip password pages
+    //root.style.setProperty('--display-form', "none");
+    //root.style.setProperty('--display-repw', "none");
+    //root.style.setProperty('--display-main', "inline");
 
     formSubmit.addEventListener("click", (e) => {
       e.preventDefault();
