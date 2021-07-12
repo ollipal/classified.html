@@ -1146,6 +1146,8 @@ This licence file is also available at https://github.com/google/material-design
 
 <div class="grid">
   <div id="navbar">
+    <div id="nav-text-spacer"></div>
+    <div class="nav-text" id="what">What is classified.html?</div>
     <div id="menu">
       <!--Menu-svg-->
       <svg height="32px" width="32px" viewBox="0 0 24 24" fill="none">
@@ -1153,8 +1155,6 @@ This licence file is also available at https://github.com/google/material-design
         <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill="currentColor"/>
       </svg>
     </div>
-    <div id="nav-text-spacer"></div>
-    <div class="nav-text">What is classified.html?</div>
     <div class="nav-text" id="empty">Download new empty</div>
     <div class="nav-text hide-when-not-main">Check for updates</div>
     <div class="nav-text hide-when-not-main" id="change">Change password</div>
@@ -1359,10 +1359,18 @@ body {
   padding-left: 0;
   display: flex;
   align-items: center;
+  position: absolute;
+  top: 0%;
+  left: 0%;
+  pointer-events: none;
 }
 
-#navbar:hover #menu{
-  display: none;
+#navbar:hover #menu {
+  padding-left: 16rem;
+}
+
+#what:hover + #menu {
+  color: var(--col-secondary);
 }
 
 .nav-text {
@@ -1432,7 +1440,7 @@ body {
 }
 
 #navbar:hover {
-  width: 18rem;
+  width: 20rem;
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.30), 0 6px 20px 0 rgba(0, 0, 0, 0.25);
   background-color: var(--col-secondary);
 }
@@ -1596,10 +1604,6 @@ body {
   #last-nav-text {
     color: var(--col-tertiary);
     background-color: var(--col-quaternary);
-  }
-
-  #menu {
-    height: 3rem;
   }
 
   .title {
