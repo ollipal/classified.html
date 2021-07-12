@@ -366,7 +366,7 @@ h2 {
       'values-container'
       'text-container'
       'navbar-container';
-    min-height: 100vh;
+    min-height: calc(100vh - 11rem);
     overflow-x: auto;
   }
 
@@ -448,7 +448,8 @@ h2 {
   }
 
   #spacer {
-    display: none;
+    display: var(--display-form);
+    height: 11rem;
   }
 
   #menu{
