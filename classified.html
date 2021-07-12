@@ -1165,9 +1165,10 @@ This licence file is also available at https://github.com/google/material-design
   <div id="values-container">
     <div id="values" class="data-sheet">
       <div class="title">Values</div>
+      <div id="key-value-pairs"></div> <!--this gets filled dynamically-->
       <form id="values-form" autocomplete="off">
-        <input type="text" id="values-key" class="form-field" autocomplete="off" placeholder="key">
-        <input type="password" id="values-value" class="form-field" autocomplete="new-password" placeholder="value">
+        <input type="text" id="valueskey" class="form-field" autocomplete="off" placeholder="key">
+        <input type="password" id="valuesvalue" class="form-field" autocomplete="new-password" placeholder="value">
         <input type="submit" value="Add" id="values-add">
       </form>
     </div>
@@ -1305,7 +1306,6 @@ h2 {
 #values-form input {
   text-align: left;
   margin: 1rem;
-  min-width: 2.5rem;
   width: 100%;
 }
 
@@ -1313,7 +1313,6 @@ h2 {
   text-align: center !important;
   padding: 0;
   height: 2.5rem;
-  width: 14rem;
   border: 1px solid var(--col-primary);
   color: var(--col-secondary);
   font-weight: bold;
@@ -1412,6 +1411,7 @@ h2 {
 #values-container {
   grid-area: values-container;
   display: var(--display-main);
+  min-width: 20rem;
 }
 
 #text-container {
@@ -1476,6 +1476,29 @@ h2 {
   padding-left: 1vw;
 }
 
+.value-line {
+  display: flex;
+  justify-content: space-between;
+  flex-basis: max-content;
+  overflow: hidden;
+  max-width: calc(100% - 0.25rem);
+}
+
+.value-line div{
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 0.5rem;
+}
+
+.key {
+  flex-shrink: 0;
+  max-width: calc(100% - 1rem);
+}
+
+.value {
+  flex-shrink: 2;
+}
 
 #save {
   width: 30%;
@@ -1557,7 +1580,7 @@ h2 {
   }
 
   #text-div {
-    padding: 15px;
+    padding: 0.5rem;
     height: auto;
   }
 
