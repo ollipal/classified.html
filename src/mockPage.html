@@ -151,7 +151,7 @@ h2 {
   display: var(--display-main);
 }
 
-.grid {
+#grid {
   display: grid;
   margin: 0;
   background-color: var(--col-quaternary);
@@ -430,7 +430,7 @@ h2 {
     background-color: transparent;
   }
 
-  .grid {
+  #grid {
     grid-template-columns: 4rem 1fr 1fr;
     grid-template-areas:'navbar-container values-container text-container';
   }
@@ -450,12 +450,12 @@ h2 {
 
 /*small screen*/
 @media only screen and (max-width: 800px) {
-  .grid {
+  #grid {
     grid-template-areas:
       'values-container'
       'text-container'
       'navbar-container';
-    min-height: calc(100vh - 11rem);
+    min-height: calc(100vh - 15rem);
     overflow-x: auto;
   }
 
@@ -580,7 +580,7 @@ h2 {
 </div>
 <div id=spacer></div>
 
-<div class="grid">
+<div id="grid">
   <div id="navbar">
     <div id="nav-text-spacer"></div>
     <div class="nav-text" id="what">What is classified.html?</div>
@@ -953,9 +953,9 @@ SVG-TERMS
     root.style.setProperty('--display-repw', "inline"); // explicitly set
 
     // uncomment these to skip password pages
-    root.style.setProperty('--display-form', "none");
-    root.style.setProperty('--display-repw', "none");
-    root.style.setProperty('--display-main', "inline");
+    //root.style.setProperty('--display-form', "none");
+    //root.style.setProperty('--display-repw', "none");
+    //root.style.setProperty('--display-main', "inline");
 
     formSubmit.addEventListener("click", (e) => {
       e.preventDefault();
