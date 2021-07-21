@@ -854,6 +854,16 @@ SVG-TERMS
       alert(elem.parentNode.parentNode.dataset.value);
     };
 
+    const preventUnload = (e) => {
+      e.preventDefault(); // this enables the unload warning message
+      e.returnValue = ''; // Chrome requires returnValue to be set
+    };
+
+    const activateSaveButton = _ => {
+      setProperty('--display-save', 'inline');
+      window.addEventListener('beforeunload', preventUnload); // activate reminder about unsaved content
+    };
+
     const addValue = (key, value) => {
       const valueLine = exampleValueLine.cloneNode(true);
       valueLine.removeAttribute('id');
@@ -871,17 +881,8 @@ SVG-TERMS
       valuesForm.valueskey.value = '';
       valuesForm.valuesvalue.value = '';
       valuesForm.valueskey.focus();
+      activateSaveButton();
     });
-
-    const preventUnload = (e) => {
-      e.preventDefault(); // this enables the unload warning message
-      e.returnValue = ''; // Chrome requires returnValue to be set
-    };
-
-    const activateSaveButton = _ => {
-      setProperty('--display-save', 'inline');
-      window.addEventListener('beforeunload', preventUnload); // activate reminder about unsaved content
-    };
 
     const downloadFile = (file) => {
       const tmpButton = document.createElement('a');
