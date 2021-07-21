@@ -1165,7 +1165,123 @@ This licence file is also available at https://github.com/google/material-design
   <div id="values-container">
     <div id="values" class="data-sheet">
       <div class="title">Values</div>
-      <div id="key-value-pairs"></div> <!--this gets filled dynamically-->
+      <div id="key-value-pairs">
+        <div class="value-line" data-key="dropbox" data-value="this is super secret">
+          <div class="key-value" onclick="keyValueClick(this)">
+            <div class="key">example1</div>
+            <div class="value">•••••••••••••••••</div>
+          </div>
+          <div class="buttons">
+            <div class="value-button copy" onclick="copyKey(this)">
+              <div>key</div>
+              <!--Copy-svg-->
+              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M16 1H2v16h2V3h12V1zm5 4H6v18h15V5zm-2 16H8V7h11v14z" fill="currentColor"/>
+              </svg>
+            </div>
+    
+            <div class="value-button not-copy" onclick="editValue(this)">
+              <!--Edit-svg-->
+              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21.41 6.34l-3.75-3.75-2.53 2.54 3.75 3.75 2.53-2.54z" fill="currentColor"/>
+              </svg>
+            </div>
+
+            <div class="value-button not-copy" onclick="deleteValue(this)">
+              <!--Delete-svg-->
+              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M6 21h12V7H6v14zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/>
+              </svg>
+            </div>
+    
+            <div class="value-button not-copy" onclick="showValue(this)">
+              <!--Visibility-svg-->
+              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M12 4C7 4 2.73 7.11 1 11.5 2.73 15.89 7 19 12 19s9.27-3.11 11-7.5C21.27 7.11 17 4 12 4zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/>
+              </svg>
+            </div>
+
+            <div class="value-button not-copy" style="display: none" onclick="hideValue(this)">
+              <!--Visibility-off-svg-->
+                <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                  <path d="M0 0h24v24H0V0zm0 0h24v24H0V0zm0 0h24v24H0V0zm0 0h24v24H0V0z" fill="none"/>
+                  <path d="M12 6.5c2.76 0 5 2.24 5 5 0 .51-.1 1-.24 1.46l3.06 3.06c1.39-1.23 2.49-2.77 3.18-4.53C21.27 7.11 17 4 12 4c-1.27 0-2.49.2-3.64.57l2.17 2.17c.47-.14.96-.24 1.47-.24zM3.42 2.45L2.01 3.87l2.68 2.68C3.06 7.83 1.77 9.53 1 11.5 2.73 15.89 7 19 12 19c1.52 0 2.97-.3 4.31-.82l3.43 3.43 1.41-1.41L3.42 2.45zM12 16.5c-2.76 0-5-2.24-5-5 0-.77.18-1.5.49-2.14l1.57 1.57c-.03.18-.06.37-.06.57 0 1.66 1.34 3 3 3 .2 0 .38-.03.57-.07L14.14 16c-.65.32-1.37.5-2.14.5zm2.97-5.33c-.15-1.4-1.25-2.49-2.64-2.64l2.64 2.64z" fill="currentColor"/>
+                </svg>
+            </div>
+
+            <div class="value-button copy" onclick="copyValue(this)">
+              <div>value</div>
+              <!--Copy-svg-->
+              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M16 1H2v16h2V3h12V1zm5 4H6v18h15V5zm-2 16H8V7h11v14z" fill="currentColor"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="value-line" data-key="dropbox" data-value="this is super secret">
+          <div class="key-value" onclick="keyValueClick(this)">
+            <div class="key">example2</div>
+            <div class="value">•••••••••</div>
+          </div>
+          <div class="buttons">
+            <div class="value-button copy" onclick="copyKey(this)">
+              <div>key</div>
+              <!--Copy-svg-->
+              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M16 1H2v16h2V3h12V1zm5 4H6v18h15V5zm-2 16H8V7h11v14z" fill="currentColor"/>
+              </svg>
+            </div>
+    
+            <div class="value-button not-copy" onclick="editValue(this)">
+              <!--Edit-svg-->
+              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21.41 6.34l-3.75-3.75-2.53 2.54 3.75 3.75 2.53-2.54z" fill="currentColor"/>
+              </svg>
+            </div>
+
+            <div class="value-button not-copy" onclick="deleteValue(this)">
+              <!--Delete-svg-->
+              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M6 21h12V7H6v14zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/>
+              </svg>
+            </div>
+    
+            <div class="value-button not-copy" onclick="showValue(this)">
+              <!--Visibility-svg-->
+              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M12 4C7 4 2.73 7.11 1 11.5 2.73 15.89 7 19 12 19s9.27-3.11 11-7.5C21.27 7.11 17 4 12 4zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/>
+              </svg>
+            </div>
+
+            <div class="value-button not-copy" style="display: none" onclick="hideValue(this)">
+              <!--Visibility-off-svg-->
+                <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                  <path d="M0 0h24v24H0V0zm0 0h24v24H0V0zm0 0h24v24H0V0zm0 0h24v24H0V0z" fill="none"/>
+                  <path d="M12 6.5c2.76 0 5 2.24 5 5 0 .51-.1 1-.24 1.46l3.06 3.06c1.39-1.23 2.49-2.77 3.18-4.53C21.27 7.11 17 4 12 4c-1.27 0-2.49.2-3.64.57l2.17 2.17c.47-.14.96-.24 1.47-.24zM3.42 2.45L2.01 3.87l2.68 2.68C3.06 7.83 1.77 9.53 1 11.5 2.73 15.89 7 19 12 19c1.52 0 2.97-.3 4.31-.82l3.43 3.43 1.41-1.41L3.42 2.45zM12 16.5c-2.76 0-5-2.24-5-5 0-.77.18-1.5.49-2.14l1.57 1.57c-.03.18-.06.37-.06.57 0 1.66 1.34 3 3 3 .2 0 .38-.03.57-.07L14.14 16c-.65.32-1.37.5-2.14.5zm2.97-5.33c-.15-1.4-1.25-2.49-2.64-2.64l2.64 2.64z" fill="currentColor"/>
+                </svg>
+            </div>
+
+            <div class="value-button copy" onclick="copyValue(this)">
+              <div>value</div>
+              <!--Copy-svg-->
+              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
+                <path d="M0 0h24v24H0V0z" fill="none"/>
+                <path d="M16 1H2v16h2V3h12V1zm5 4H6v18h15V5zm-2 16H8V7h11v14z" fill="currentColor"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div> <!--this gets filled dynamically-->
       <form id="values-form" autocomplete="off">
         <input type="text" id="valueskey" class="form-field" autocomplete="off" placeholder="key">
         <input type="password" id="valuesvalue" class="form-field" autocomplete="new-password" placeholder="value">
@@ -1307,7 +1423,7 @@ h2 {
 
 #values-form input {
   text-align: left;
-  margin: 1rem;
+  margin: 0.5rem;
   width: 100%;
 }
 
@@ -1429,6 +1545,7 @@ h2 {
   height: 4rem;
   line-height: 4rem;
   padding-left: 1.5rem;
+  margin-bottom: 1px;
 }
 
 .data-sheet:focus-within {
@@ -1478,19 +1595,79 @@ h2 {
   padding-left: 1vw;
 }
 
-.value-line {
+.key-value {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   flex-basis: max-content;
   overflow: hidden;
-  max-width: calc(100% - 0.25rem);
+  max-width: 100%;
+  height: 2.5rem;
 }
 
-.value-line div{
+.key-value div {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  padding: 0.5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  line-height: 3rem;
+}
+
+.buttons {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  flex-basis: max-content;
+  overflow: hidden;
+  min-width: 100%;
+  height: 2.5rem;
+  padding: 0 !important;
+}
+
+.buttons svg {
+  height: 2.5rem;
+}
+
+/*only proper hover with a proper pointer*/
+@media (hover: hover) and (pointer: fine) {
+  .value-line:hover {
+    max-width: 100%;
+  }
+
+  .value-line:hover .key-value {
+    display: none;
+  }
+
+  .value-line:hover .buttons {
+    display: flex;
+  }
+}
+
+.value-button {
+  display: flex;
+  line-height: 2.5rem;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.copy {
+  flex-grow: 1;
+}
+
+.not-copy {
+  flex-grow: 1.5;
+}
+
+.value-button:hover {
+  color: var(--col-secondary);
+  background-color: var(--col-primary);
+}
+
+.value-button div {
+  line-height: 2.5rem;
+  margin: 0;
+  padding: 0;
 }
 
 .key {
@@ -1516,6 +1693,7 @@ h2 {
   margin: 10px;
   transition: 50ms ease;
   display: var(--display-save);
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.20), 0 6px 20px 0 rgba(0, 0, 0, 0.15);
 }
 
 #save:hover{
@@ -1642,6 +1820,8 @@ h2 {
 
   #save {
     line-height: 3rem;
+    border: 0.5px solid var(--col-secondary);
+    box-shadow: none;
   }
 
   #save:hover{
