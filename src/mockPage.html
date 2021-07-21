@@ -867,6 +867,9 @@ This licence file is also available at https://github.com/google/material-design
 SVG-TERMS
 */
 
+    const exampleValueLine = document.querySelector('#example-value-line');
+    const keyValuePairsDiv = document.querySelector('#key-value-pairs');
+
     // handle previously clicked value-line on mobile where hovering is not in use
     let currentElem = undefined;
     let previousElem = undefined;
@@ -879,10 +882,6 @@ SVG-TERMS
       currentElem = elem;
     }
 
-    const exampleValueLine = document.querySelector('#example-value-line');
-
-    // handle hiding previously focused value line on mobile where hover is not used
-    const keyValuePairsDiv = document.querySelector('#key-value-pairs');
     document.body.addEventListener("click", (event) => {
       if (previousElem !== undefined) {
         previousElem.style.display = "flex";
