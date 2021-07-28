@@ -1165,82 +1165,8 @@ This licence file is also available at https://github.com/google/material-design
     <div class="nav-text" id="last-nav-text">v0.0.1 ollipal 2021</div>
   </div>
 
-  <div id="values-container">
-    <div id="values" class="data-sheet">
-      <div class="title">Values</div>
-
-      <div class="value-line" id="example-value-line">
-        <div class="key-value" onclick="keyValueClick(this)">
-          <div class="key">example1</div>
-          <div class="value">•••••••••••••••••</div>
-        </div>
-        <div class="buttons">
-          <div class="value-button copy" onclick="copyKey(this)">
-            <div>key</div>
-            <!--Copy-svg-->
-            <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
-              <path d="M0 0h24v24H0V0z" fill="none"/>
-              <path d="M16 1H2v16h2V3h12V1zm5 4H6v18h15V5zm-2 16H8V7h11v14z" fill="currentColor"/>
-            </svg>
-          </div>
-  
-          <div class="value-button not-copy" onclick="editValue(this)">
-            <!--Edit-svg-->
-            <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
-              <path d="M0 0h24v24H0V0z" fill="none"/>
-              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21.41 6.34l-3.75-3.75-2.53 2.54 3.75 3.75 2.53-2.54z" fill="currentColor"/>
-            </svg>
-          </div>
-
-          <div class="value-button not-copy" onclick="deleteValue(this)">
-            <!--Delete-svg-->
-            <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
-              <path d="M0 0h24v24H0V0z" fill="none"/>
-              <path d="M6 21h12V7H6v14zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/>
-            </svg>
-          </div>
-  
-          <div class="value-button not-copy visibility" onclick="showValue(this)">
-            <!--Visibility-svg-->
-            <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
-              <path d="M0 0h24v24H0V0z" fill="none"/>
-              <path d="M12 4C7 4 2.73 7.11 1 11.5 2.73 15.89 7 19 12 19s9.27-3.11 11-7.5C21.27 7.11 17 4 12 4zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/>
-            </svg>
-          </div>
-
-          <div class="value-button not-copy visibility-off" style="display: none" onclick="hideValue(this)">
-            <!--Visibility-off-svg-->
-              <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
-                <path d="M0 0h24v24H0V0zm0 0h24v24H0V0zm0 0h24v24H0V0zm0 0h24v24H0V0z" fill="none"/>
-                <path d="M12 6.5c2.76 0 5 2.24 5 5 0 .51-.1 1-.24 1.46l3.06 3.06c1.39-1.23 2.49-2.77 3.18-4.53C21.27 7.11 17 4 12 4c-1.27 0-2.49.2-3.64.57l2.17 2.17c.47-.14.96-.24 1.47-.24zM3.42 2.45L2.01 3.87l2.68 2.68C3.06 7.83 1.77 9.53 1 11.5 2.73 15.89 7 19 12 19c1.52 0 2.97-.3 4.31-.82l3.43 3.43 1.41-1.41L3.42 2.45zM12 16.5c-2.76 0-5-2.24-5-5 0-.77.18-1.5.49-2.14l1.57 1.57c-.03.18-.06.37-.06.57 0 1.66 1.34 3 3 3 .2 0 .38-.03.57-.07L14.14 16c-.65.32-1.37.5-2.14.5zm2.97-5.33c-.15-1.4-1.25-2.49-2.64-2.64l2.64 2.64z" fill="currentColor"/>
-              </svg>
-          </div>
-
-          <div class="value-button copy" onclick="copyValue(this)">
-            <div>value</div>
-            <!--Copy-svg-->
-            <svg height="24px" viewBox="0 0 24 24" width="24px" fill="none">
-              <path d="M0 0h24v24H0V0z" fill="none"/>
-              <path d="M16 1H2v16h2V3h12V1zm5 4H6v18h15V5zm-2 16H8V7h11v14z" fill="currentColor"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div id="key-value-pairs">
-      </div> <!--this gets filled dynamically-->
-      <form id="values-form" autocomplete="off">
-        <input type="text" id="valueskey" class="form-field" autocomplete="off" placeholder="key">
-        <input type="password" id="valuesvalue" class="form-field" autocomplete="new-password" placeholder="value">
-        <input type="submit" value="Add" id="values-add">
-      </form>
-    </div>
-  </div>
   <div id="text-container">
-    <div id="text" class="data-sheet">
-      <div class="title">Text</div>
-      <div id="text-div" contenteditable="true" placeholder="type here..."></div>
-    </div>
+    <div id="text" contenteditable="true" spellcheck="false" placeholder="type here..."></div>
   </div>
 </div>
 
@@ -1358,40 +1284,6 @@ h2 {
   color: var(--col-primary);
 }
 
-#values-form {
-  height: 6rem;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-#values-form input {
-  text-align: left;
-  margin: 0.5rem;
-  width: 100%;
-}
-
-#values-add {
-  text-align: center !important;
-  padding: 0;
-  height: 2.5rem;
-  border: 1px solid var(--col-primary);
-  color: var(--col-secondary);
-  font-weight: bold;
-  background-color: var(--col-primary);
-  font-family: 'Courier New', Courier, monospace;
-  cursor: pointer;
-  transition: 100ms ease;
-}
-
-#values-add:hover {
-  background-color: var(--col-secondary);
-  color: var(--col-primary);
-}
-
 #main-div {
   display: var(--display-main);
 }
@@ -1484,31 +1376,6 @@ h2 {
   display: var(--display-main);
 }
 
-.title {
-  font-weight: bold;
-  color: var(--col-secondary);
-  background-color: var(--col-primary);
-  letter-spacing: 0.3ch;
-  height: 4rem;
-  line-height: 4rem;
-  padding-left: 1.5rem;
-  margin-bottom: 1px;
-}
-
-.data-sheet:focus-within {
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.30), 0 6px 20px 0 rgba(0, 0, 0, 0.25);
-}
-
-.data-sheet {
-  background-color: var(--col-secondary);
-  font-family: 'Courier New', Courier, monospace;
-  height:auto;
-  max-width: 818px;
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-  text-align: left;
-  overflow-wrap: anywhere; /* other option: overflow-wrap:normal; overflow: hidden; overflow-x: scroll; */
-}
-
 #navbar:hover {
   width: 20rem;
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.30), 0 6px 20px 0 rgba(0, 0, 0, 0.25);
@@ -1525,108 +1392,23 @@ h2 {
 }
 
 #text {
-  margin: 1vw 1vw 6rem 0.5vw;
-  min-height: min(calc(100vh - 2vw), calc(1058px + 2*4vw));
-}
-
-#text-div {
   padding: clamp(20px, 4vw, 96px);
-  outline:none;
+  outline: none;
+  justify-self: center;
+  margin: 1vw auto 6rem auto;
+  min-height: 1157px;
+  background-color: var(--col-secondary);
+  font-family: 'Courier New', Courier, monospace;
+  height:auto;
+  max-width: 818px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  text-align: left;
+  overflow-wrap: anywhere; /* other option: overflow-wrap:normal; overflow: hidden; overflow-x: scroll; */
+  transition: 150ms;
 }
 
-#values{
-  margin: 1vw 0.5vw 6rem auto;
-}
-
-#values-container {
-  padding-left: 1vw;
-}
-
-#example-value-line {
-  display: none;
-}
-
-.key-value {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-basis: max-content;
-  overflow: hidden;
-  max-width: 100%;
-  height: 2.5rem;
-}
-
-.key-value div {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  line-height: 3rem;
-}
-
-.buttons {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  flex-basis: max-content;
-  overflow: hidden;
-  min-width: 100%;
-  height: 2.5rem;
-  padding: 0 !important;
-}
-
-.buttons svg {
-  height: 2.5rem;
-}
-
-/*only proper hover with a proper pointer*/
-@media (hover: hover) and (pointer: fine) {
-  .value-line:hover {
-    max-width: 100%;
-  }
-
-  .value-line:hover .key-value {
-    display: none;
-  }
-
-  .value-line:hover .buttons {
-    display: flex;
-  }
-}
-
-.value-button {
-  display: flex;
-  line-height: 2.5rem;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.copy {
-  flex-grow: 1;
-}
-
-.not-copy {
-  flex-grow: 1.5;
-}
-
-.value-button:hover {
-  color: var(--col-secondary);
-  background-color: var(--col-primary);
-}
-
-.value-button div {
-  line-height: 2.5rem;
-  margin: 0;
-  padding: 0;
-}
-
-.key {
-  max-width: calc(100% - 5.5rem); /*leave some space for value*/
-}
-
-.value {
-  max-width: calc(100% - 5.5rem); /*leave some space for key*/
+#text:focus-within {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.30), 0 6px 20px 0 rgba(0, 0, 0, 0.25);
 }
 
 #save {
@@ -1667,7 +1449,7 @@ h2 {
 }
 
 /*large screen*/
-@media only screen and (min-width: 801px) {*
+@media only screen and (min-width: 901px) {*
   #navbar {
     top: 0;
     width: 4rem;
@@ -1676,8 +1458,8 @@ h2 {
   }
 
   #grid {
-    grid-template-columns: 4rem 1fr 1fr;
-    grid-template-areas:'navbar-container values-container text-container';
+    grid-template-columns: 4rem 1fr 4rem;
+    grid-template-areas:'navbar-container text-container .';
   }
 
   .nav-text {
@@ -1694,10 +1476,9 @@ h2 {
 }
 
 /*small screen*/
-@media only screen and (max-width: 800px) {
+@media only screen and (max-width: 900px) {
   #grid {
     grid-template-areas:
-      'values-container'
       'text-container'
       'navbar-container';
     min-height: calc(100vh - 15rem);
@@ -1706,20 +1487,8 @@ h2 {
 
   #text {
     margin: 1rem;
-    min-height: calc(100vh - 30rem);
-  }
-
-  #text-div {
     padding: 0.5rem;
-    height: auto;
-  }
-
-  #values {
-    margin: 1rem 1rem 0 1rem;
-  }
-
-  #values-container {
-    padding-left: 0;
+    min-height: max(10rem, 100vh - 25rem);
   }
 
   #navbar{
@@ -1761,11 +1530,6 @@ h2 {
   #last-nav-text {
     color: var(--col-tertiary);
     background-color: var(--col-quaternary);
-  }
-
-  .title {
-    height: 3rem;
-    line-height: 3rem;
   }
 
   #save {
