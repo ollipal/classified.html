@@ -114,10 +114,6 @@ h2 {
 }
 
 #values-form {
-  height: 6rem;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
   align-items: center;
   margin: 0;
   overflow-wrap: anywhere;
@@ -126,7 +122,20 @@ h2 {
 #values-form input {
   text-align: left;
   margin: 0.5rem;
-  width: 100%;
+  width: 40%;
+}
+
+#values-form label {
+  text-align: right;
+  margin: 0.5rem;
+  width: 25%;
+}
+
+.form-row {
+  display:flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
 }
 
 #values-add {
@@ -663,9 +672,21 @@ h2 {
       <div id="key-value-pairs">
       </div> <!--this gets filled dynamically-->
       <form id="values-form" autocomplete="off">
-        <input type="text" id="valueskey" class="form-field" autocomplete="off" placeholder="key">
-        <input type="password" id="valuesvalue" class="form-field" autocomplete="new-password" placeholder="value">
-        <input type="submit" value="Add" id="values-add">
+        <div class="form-row">
+          <label for="valueskey">name</label>
+          <input type="text" id="valueskey" class="form-field" autocomplete="off" placeholder="name">
+        </div>
+        <div class="form-row">
+          <label for="valuesuser">user</label>
+          <input type="text" id="valuesuser" class="form-field" autocomplete="off" placeholder="user">
+        </div>
+        <div class="form-row">
+          <label for="valuesvalue">password</label>
+          <input type="password" id="valuesvalue" class="form-field" autocomplete="new-password" placeholder="password (leave empty to autogenerate)">
+        </div>
+        <div class="form-row">
+          <input type="submit" value="Add" id="values-add">
+        </div>
       </form>
     </div>
   </div>
