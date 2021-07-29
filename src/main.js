@@ -341,14 +341,14 @@ Example usage:
   const clearConsole = () => process.stdout.write('\x1Bc');
 
   // always clear the console on exit if exit has not been marked to be handled properly
-  /* let exitHandled = false;
+  let exitHandled = false;
   process.on('exit', (code) => {
     if (!exitHandled) {
       clearConsole();
       console.log('possible changes discarded');
     }
     process.exit(code);
-  }); */
+  });
 
   // write to global readline, if resized when waiting for a command
   process.stdout.on('resize', () => {
@@ -560,6 +560,27 @@ Example usage:
     }
   };
 
+  const replaceText = (commandData) => {
+    rows = [commandData];
+    return 'text replaced';
+  };
+
+  const replaceRow = (commandData) => {
+    const [row, ...rest] = commandData.split(' ');
+    if (isNaN(parseInt(row))) {
+      return `not a proper row: ${row}`;
+    }
+    if (rest.length === 0) {
+      return 'replace data missing';
+    }
+    if (row > 0 && row < rows.length + 1) {
+      rows[row - 1] = rest.join(' ');
+      return `row ${row} replaced`;
+    } else {
+      return `could not replace row ${row}`;
+    }
+  };
+
   const changePassword = async () => {
     clearConsole();
     console.log('changing password:');
@@ -594,6 +615,12 @@ Example usage:
       handleMessage = deleteRow(parseInt(commandData));
     } else if (command === 'delete' && target === 'row' && commandData === undefined) {
       handleMessage = 'row number to delete missing';
+    } else if (command === 'replace' && target === 'text' && commandData !== undefined) {
+      handleMessage = replaceText(commandData);
+    } else if (command === 'replace' && target === 'text' && commandData === undefined) {
+      handleMessage = 'replace data missing';
+    } else if (command === 'replace' && target === 'row' && commandData !== undefined) {
+      handleMessage = replaceRow(commandData);
     } else if (command === 'password') {
       handleMessage = await changePassword();
     } else {
@@ -639,13 +666,13 @@ Example usage:
       process.exit();
     }
 
-    let previous = ['add text ', 'exit', 'discard', 'help', 'delete row ']; // hints
+    let hints = ['add text ', 'exit', 'discard', 'help', 'delete row ', 'replace row '];
     let handled, message;
     while (true) {
       printContents();
       if (message) console.log(message + '\n');
       waitingForCommand = true;
-      const reply = await question("type 'help', enter a command or leave empty to save and exit: ", previous);
+      const reply = await question("type 'help', enter a command or leave empty to save and exit: ", hints);
       waitingForCommand = false;
       if (reply === 'resize') continue;
 
@@ -654,8 +681,8 @@ Example usage:
 
       // prepend list of hints if command was handled, and is different to the first one
       if (handled) {
-        const newPrevious = `${command} ${target ? target + ' ' : ''}`;
-        if (newPrevious !== previous[0]) previous = [newPrevious, ...previous];
+        const newHint = `${command} ${target ? target + ' ' : ''}`;
+        if (newHint !== hints[0]) hints = [newHint, ...hints];
       }
     }
   })();
