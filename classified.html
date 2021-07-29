@@ -378,7 +378,7 @@ const updateSourceData = (source, data) => {
 };
 
 /*
-Encode values and text into a spesific format, which is later decodeable.
+Encode values and text into a spesific extendable format, which is later decodeable.
 
 The format is designed to work without limiting any characters from the input
 and without needing to handle escaping characters. This is done by saving lengths of
@@ -394,22 +394,15 @@ body:
 example:
 values: [key1, value1], [key2, value2] text: 'example_text'
 encoded: 22&values|4|6|4|6&text|13key1value1key2value2example_text
+
+NOTE: currently only encodes text, other data types can be added in the future
 */
-const encode = (values, text) => {
+const encode = (text) => {
   let header = '';
   let body = '';
 
-  // append values info to header and key + value pairs to body
-  header += 'values';
-  Object.keys(values)
-    .sort()
-    .forEach((key, _) => {
-      header += `|${key.length}|${values[key].length}`;
-      body += `${key}${values[key]}`;
-    });
-
-  // append text info to header and actual text to body
-  header += '&text';
+  // append text info to header and text to body
+  header += 'text';
   header += `|${text.length}`;
   body += `${text}`;
 
@@ -425,7 +418,6 @@ Decode values and text from input. See explanation form 'encode'.
 */
 const decode = (input) => {
   let text = '';
-  const values = {};
 
   // separate headersections form the body
   const headerLen = Number(input.substring(0, input.indexOf('&')));
@@ -443,11 +435,6 @@ const decode = (input) => {
     });
 
     switch (name) {
-      case 'values':
-        for (i = 0; i < parts.length; i += 2) {
-          values[parts[i]] = parts[i + 1];
-        }
-        break;
       case 'text':
         text += parts[0];
         break;
@@ -456,7 +443,7 @@ const decode = (input) => {
     };
   }
 
-  return [values, text];
+  return text;
 };
 
 if (!inBrowser()) { // executed in Node.js
@@ -493,22 +480,17 @@ COMMANDS:
 TARGETS:
   text          all of the text
   row ROWNUM    some spesific row of text, for example 'row 5'
-  values        all of the values
-  value KEY     spesific value, for example 'value "server key"'. Key must be quoteted if it has spaces.
-
 
 Example usage:
   add text This is classified.html    append 'This is classified.html' row to text
   delete row 1                        delete the first row of text
-  add value 'server key' 1 2 3         add value '1 2 3' with a key 'server key' to values
-  copy value 'server key'             copy value with a key 'server key' to the clipboard`;
+  copy text                           copy the whole text to clipboard, for a certain time`;
 
   // global variables to handle Node.js state
   let password, decryptedData, newData;
   let changes = false;
   let waitingForCommand = false;
   let rl;
-  let values;
 
   /*
   prompt from: https://github.com/ollipal/minimal-password-prompt
@@ -654,7 +636,7 @@ Example usage:
   */
   const getPasswordAndData = async () => {
     if (dataEmpty()) {
-      return [await pickPassword(), [{}, '']];
+      return [await pickPassword(), ''];
     } else {
       return await decryptExistingData();
     }
@@ -710,7 +692,7 @@ Example usage:
       try {
         const tmpPath = path.join(os.tmpdir(), filename);
         const source = fs.readFileSync(__filename, 'utf8');
-        const updatedData = await encrypt(password, await encode(values, decryptedData + newData));
+        const updatedData = await encrypt(password, await encode(decryptedData + newData));
         const updatedSource = updateSourceData(source, updatedData);
         fs.writeFileSync(tmpPath, updatedSource);
         fs.renameSync(tmpPath, __filename);
@@ -729,20 +711,6 @@ Example usage:
 
   const minRowLen = 58; // note, can be shorter if the terminal is shorter
 
-  // return text padded with spaces, bolded, white and with black background
-  const title = (str, len) => `\x1b[1m\x1b[37m\x1b[40m  ${str.padEnd(len - 2)}\x1b[0m`;
-
-  // return value padded with spaces, bolded, white and with black background and cut to max length of the terminal
-  const value = (key, value, len) => {
-    if ((key + value).length <= len - 3) {
-      return `\x1b[30m\x1b[47m ${key.padEnd(len - value.length - 2)}${'*'.repeat(value.length)} \x1b[0m`;
-    } else if (process.stdout.columns - key.length - 6 >= 0) {
-      return `\x1b[30m\x1b[47m ${key} ${'*'.repeat(process.stdout.columns - key.length - 6)}... \x1b[0m`;
-    } else if (process.stdout.columns > 4) {
-      return `\x1b[30m\x1b[47m${(' ' + key).substr(0, process.stdout.columns - 4)}... \x1b[0m`;
-    }
-  };
-
   // append input with a cyan row number and space, normal text to black and background to white
   const row = (str, len, num) => {
     numStr = String(num).padEnd(2);
@@ -755,13 +723,6 @@ Example usage:
   };
 
   const getPrintWidth = () => {
-    let maxValuePrintLen = 0;
-    Object.keys(values)
-      .forEach((key, _) => {
-        const len = key.length + values[key].length + 3; // 3 because at least one space in between and padding on both sides
-        if (len > maxValuePrintLen) maxValuePrintLen = len;
-      });
-
     let longestRowLen = 0;
     if (decryptedData + newData !== '\n') {
       const rows = (decryptedData + newData).split('\n');
@@ -770,35 +731,21 @@ Example usage:
       longestRowLen = rows.reduce((a, b) => a.length > b.length ? a : b).length + 3; // 3 because padding start and end
     }
 
-    return Math.min(Math.max(maxValuePrintLen, longestRowLen, minRowLen), process.stdout.columns);
+    return Math.min(Math.max(longestRowLen, minRowLen), process.stdout.columns);
   };
 
   const printContents = () => {
     clearConsole();
     const printWidth = getPrintWidth();
 
-    if (Object.keys(values).length !== 0) {
-      console.log(title('Values', printWidth));
-      let textContents = '';
-      Object.keys(values)
-        .sort()
-        .forEach((key, _) => {
-          textContents += value(key, values[key], printWidth) + '\n';
-        });
-      textContents += value('', '', printWidth) + '\n';
-      console.log(textContents);
-    }
-
     if (decryptedData + newData !== '\n') {
       const rows = (decryptedData + newData).split('\n');
       // rows.shift(); // remove first TODO fix
       rows.pop(); // remove last TODO why these are needed?
-      console.log(title('Text', printWidth));
       let textContents = '';
       for (let rowNum = 0; rowNum < rows.length; rowNum++) {
         textContents += row(rows[rowNum], printWidth, rowNum + 1) + '\n';
       }
-      textContents += row('', printWidth, ' ');
       console.log(textContents);
     }
   };
@@ -806,37 +753,7 @@ Example usage:
   const addText = (commandData) => {
     changes = true;
     newData += commandData + '\n';
-  };
-
-  const addValue = async (commandData) => {
-    let key, value;
-    // parse key
-    if (commandData.startsWith('"') && commandData.split('"').length >= 3) {
-      key = commandData.split('"')[1];
-      value = commandData.slice(key.length + 3); // 2 x quotes + space = 3
-    } else if (commandData.startsWith("'") && commandData.split("'").length >= 3) {
-      key = commandData.split("'")[1];
-      value = commandData.slice(key.length + 3); // 2 x quotes + space = 3
-    } else if (commandData.split(' ').length >= 2) {
-      key = commandData.split(' ')[0];
-      value = commandData.slice(key.length + 1); // 1 x space = 1
-    } else {
-      key = commandData;
-    }
-    // check for duplicate
-    if (key in values) {
-      return `error: ${key} already in values, delete first if you want to replace`;
-    }
-
-    // get value if not present
-    if (!value) {
-      value = await prompt(`value for key ${key}: `);
-    }
-
-    // add value
-    values[key] = value;
-    changes = true;
-    return `value for ${key} added`;
+    return 'new row added';
   };
 
   const changePassword = async () => {
@@ -864,11 +781,8 @@ Example usage:
       handleMessage = await downloadNew(target);
     } else if (command === 'help') {
       handleMessage = helpString + '\n';
-    } else if (command === 'add' && target === 'value' && commandData !== undefined) {
-      handleMessage = await addValue(commandData);
     } else if (command === 'add' && target === 'text' && commandData !== undefined) {
-      addText(commandData);
-      handleMessage = 'new row added';
+      handleMessage = addText(commandData);
     } else if (command === 'password') {
       await changePassword();
       handleMessage = 'password changed successfully';
@@ -896,7 +810,7 @@ Example usage:
     }
 
     // select password, or decrypt data with the existing one
-    [password, [values, decryptedData]] = await getPasswordAndData();
+    [password, decryptedData] = await getPasswordAndData();
     // initialize new data
     newData = decryptedData.endsWith('\n') ? '' : '\n';
 
@@ -914,7 +828,7 @@ Example usage:
       process.exit();
     }
 
-    let previous = ['add value ', 'add text ', 'exit', 'discard']; // hints
+    let previous = ['add text ', 'exit', 'discard', 'help']; // hints
     let handled, message;
     while (true) {
       printContents();
@@ -1672,10 +1586,9 @@ h2 {
         alert('Incorrect password');
         form.password.value = '';
       } else {
-        const [values, text] = await decode(decryptionResult.data);
+        const text = await decode(decryptionResult.data);
         formSubmit.removeEventListener('click', enterPassword);
         currentPassword = password;
-        console.log(values); // TODO save and use
         showDecrypted(text);
       }
     };
@@ -1698,7 +1611,7 @@ h2 {
     });
 
     saveButton.addEventListener('click', async (_) => {
-      await obtainFile(await encrypt(currentPassword, await encode({}, dataInput.innerText)), filename); // TODO use the actual values
+      await obtainFile(await encrypt(currentPassword, await encode(dataInput.innerText)), filename);
 
       // reset saving functionality, user might continue use after save
       setProperty('--display-save', 'none');
