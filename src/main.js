@@ -284,10 +284,10 @@ Example usage:
   copy text                           copy the whole text to clipboard, for a certain time`;
 
   // global variables to handle Node.js state
-  let password, decryptedData, newData;
+  let password, rows;
   let changes = false;
   let waitingForCommand = false;
-  let rl;
+  let rl; // readLine interface
 
   /*
   prompt from: https://github.com/ollipal/minimal-password-prompt
@@ -483,13 +483,13 @@ Example usage:
   Save changes if a new file or changes
   Saving is done by writing data to a temporary file, and renaming it to the actual one.
   */
-  const saveChanges = async (password, decryptedData, newData) => {
+  const saveChanges = async (password, text) => {
     if (dataEmpty() || changes) {
       // copy file to tmp file, and rename
       try {
         const tmpPath = path.join(os.tmpdir(), filename);
         const source = fs.readFileSync(__filename, 'utf8');
-        const updatedData = await encrypt(password, await encode(decryptedData + newData));
+        const updatedData = await encrypt(password, await encode(text));
         const updatedSource = updateSourceData(source, updatedData);
         fs.writeFileSync(tmpPath, updatedSource);
         fs.renameSync(tmpPath, __filename);
@@ -521,10 +521,7 @@ Example usage:
 
   const getPrintWidth = () => {
     let longestRowLen = 0;
-    if (decryptedData + newData !== '\n') {
-      const rows = (decryptedData + newData).split('\n');
-      // rows.shift(); // remove first TODO fix
-      rows.pop(); // remove last TODO why these are needed?
+    if (rows.length !== 0) {
       longestRowLen = rows.reduce((a, b) => a.length > b.length ? a : b).length + 3; // 3 because padding start and end
     }
 
@@ -533,23 +530,19 @@ Example usage:
 
   const printContents = () => {
     clearConsole();
-    const printWidth = getPrintWidth();
-
-    if (decryptedData + newData !== '\n') {
-      const rows = (decryptedData + newData).split('\n');
-      // rows.shift(); // remove first TODO fix
-      rows.pop(); // remove last TODO why these are needed?
+    if (rows.length !== 0) {
+      const printWidth = getPrintWidth();
       let textContents = '';
       for (let rowNum = 0; rowNum < rows.length; rowNum++) {
         textContents += row(rows[rowNum], printWidth, rowNum + 1) + '\n';
       }
-      console.log(textContents);
+      console.log(textContents.slice(0, -1));
     }
   };
 
   const addText = (commandData) => {
     changes = true;
-    newData += commandData + '\n';
+    rows.push(commandData);
     return 'new row added';
   };
 
@@ -569,7 +562,7 @@ Example usage:
     let handleMessage;
     if (command === 'exit' || command === undefined) {
       clearConsole();
-      await saveChanges(password, decryptedData, newData);
+      await saveChanges(password, rows.join('\n'));
       exitHandled = true;
       process.exit();
     } else if (command === 'discard') {
@@ -607,17 +600,18 @@ Example usage:
     }
 
     // select password, or decrypt data with the existing one
+    let decryptedData;
     [password, decryptedData] = await getPasswordAndData();
-    // initialize new data
-    newData = decryptedData.endsWith('\n') ? '' : '\n';
+    // initialize rows
+    rows = decryptedData === '' ? [] : decryptedData.split('\n');
 
     // handle any other command that required password except the default (exit)
     if (command !== undefined) {
       const [handled, message] = await handleCommand(command, target, commandData);
       clearConsole();
       if (handled) {
-        if (message) console.log(message);
-        await saveChanges(password, decryptedData, newData);
+        if (message) console.log(message + '\n');
+        await saveChanges(password, rows.join('\n'));
       } else {
         console.log('error: could not handle command');
       }
@@ -629,7 +623,7 @@ Example usage:
     let handled, message;
     while (true) {
       printContents();
-      if (message) console.log(message);
+      if (message) console.log(message + '\n');
       waitingForCommand = true;
       const reply = await question("type 'help', enter a command or leave empty to save and exit: ", previous);
       waitingForCommand = false;
