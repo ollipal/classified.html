@@ -341,14 +341,14 @@ Example usage:
   const clearConsole = () => process.stdout.write('\x1Bc');
 
   // always clear the console on exit if exit has not been marked to be handled properly
-  let exitHandled = false;
+  /* let exitHandled = false;
   process.on('exit', (code) => {
     if (!exitHandled) {
       clearConsole();
       console.log('possible changes discarded');
     }
     process.exit(code);
-  });
+  }); */
 
   // write to global readline, if resized when waiting for a command
   process.stdout.on('resize', () => {
@@ -546,6 +546,20 @@ Example usage:
     return 'new row added';
   };
 
+  const deleteText = () => {
+    rows = [];
+    return 'text deleted';
+  };
+
+  const deleteRow = (row) => {
+    if (row > 0 && row < rows.length + 1) {
+      rows.splice(row - 1, 1);
+      return `row ${row} deleted`;
+    } else {
+      return `could not delete row ${row}`;
+    }
+  };
+
   const changePassword = async () => {
     clearConsole();
     console.log('changing password:');
@@ -573,6 +587,12 @@ Example usage:
       handleMessage = helpString + '\n';
     } else if (command === 'add' && target === 'text' && commandData !== undefined) {
       handleMessage = addText(commandData);
+    } else if (command === 'delete' && target === 'text' && commandData === undefined) {
+      handleMessage = deleteText();
+    } else if (command === 'delete' && target === 'row' && !isNaN(parseInt(commandData))) {
+      handleMessage = deleteRow(parseInt(commandData));
+    } else if (command === 'delete' && target === 'row' && commandData === undefined) {
+      handleMessage = 'row number to delete missing';
     } else if (command === 'password') {
       await changePassword();
       handleMessage = 'password changed successfully';
@@ -619,7 +639,7 @@ Example usage:
       process.exit();
     }
 
-    let previous = ['add text ', 'exit', 'discard', 'help']; // hints
+    let previous = ['add text ', 'exit', 'discard', 'help', 'delete row ']; // hints
     let handled, message;
     while (true) {
       printContents();
