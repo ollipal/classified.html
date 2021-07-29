@@ -768,6 +768,7 @@ Example usage:
     console.log('changing password:');
     password = await pickPassword();
     changes = true;
+    return 'password changed successfully';
   };
 
   /*
@@ -797,8 +798,7 @@ Example usage:
     } else if (command === 'delete' && target === 'row' && commandData === undefined) {
       handleMessage = 'row number to delete missing';
     } else if (command === 'password') {
-      await changePassword();
-      handleMessage = 'password changed successfully';
+      handleMessage = await changePassword();
     } else {
       unknownCommand = true;
       handleMessage = `command did not work: COMMAND: ${command}, TARGET: ${target}, DATA: ${commandData}`;
