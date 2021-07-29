@@ -459,9 +459,6 @@ const decode = (input) => {
   return [values, text];
 };
 
-// HTML hard coded functions, that cannot be created inside if/else or the browser does not find them
-let keyValueClick, copyKey, editValue, deleteValue, showValue, hideValue, copyValue;
-
 if (!inBrowser()) { // executed in Node.js
   /*
    * Node.js specific code
@@ -1582,92 +1579,13 @@ h2 {
 
     const form = document.getElementById('form');
     const formSubmit = document.getElementById('form-submit');
-    const dataInput = document.getElementById('text-div');
+    const dataInput = document.getElementById('text');
     const saveButton = document.getElementById('save');
     const changePasswordButton = document.getElementById('change');
     const emptyButton = document.getElementById('empty');
-    const valueAdd = document.getElementById('values-add');
-    const valuesForm = document.getElementById('values-form');
-    const keyValuePairs = document.getElementById('key-value-pairs');
-    const exampleValueLine = document.querySelector('#example-value-line');
-    const keyValuePairsDiv = document.querySelector('#key-value-pairs');
     let currentPassword; // this can change if the user changes password
 
     const setProperty = (key, value) => document.documentElement.style.setProperty(key, value);
-
-    // handle previously clicked value-line on mobile where hovering is not in use
-    let currentElem;
-    let previousElem;
-    // eslint-disable-next-line no-unused-vars
-    keyValueClick = (elem) => {
-      elem.style.display = 'none';
-      elem.nextElementSibling.style.display = 'flex';
-      if (currentElem !== undefined) {
-        previousElem = currentElem;
-      }
-      currentElem = elem;
-    };
-
-    document.body.addEventListener('click', (event) => {
-      if (previousElem !== undefined) {
-        previousElem.style.display = 'flex';
-        previousElem.nextElementSibling.style.display = 'none';
-        previousElem = undefined;
-      }
-      if (!keyValuePairsDiv.contains(event.target) && currentElem !== undefined) {
-        currentElem.style.display = 'flex';
-        currentElem.nextElementSibling.style.display = 'none';
-        currentElem = undefined;
-      }
-    });
-
-    const getValue = (elem) => elem.parentNode.parentNode.dataset.value;
-
-    // eslint-disable-next-line no-unused-vars
-    copyKey = (elem) => {
-      alert(elem.parentNode.parentNode.dataset.key);
-    };
-
-    // eslint-disable-next-line no-unused-vars
-    editValue = (elem) => {
-      alert('editing ' + elem.parentNode.parentNode.dataset.key);
-    };
-
-    // eslint-disable-next-line no-unused-vars
-    deleteValue = (elem) => {
-      alert('deleting ' + elem.parentNode.parentNode.dataset.key);
-    };
-
-    let previousShown;
-    // eslint-disable-next-line no-unused-vars
-    showValue = (elem) => {
-      // allow only one line to be shown at once
-      if (previousShown !== undefined) {
-        hideValue(previousShown);
-      }
-
-      elem.parentNode.querySelector('.visibility').style.display = 'none';
-      elem.parentNode.querySelector('.visibility-off').style.display = 'flex';
-      elem.parentNode.parentNode.querySelector('.key').style.flexShrink = 2;
-      elem.parentNode.parentNode.querySelector('.value').style.flexShrink = 0;
-      elem.parentNode.parentNode.querySelector('.value').innerHTML = getValue(elem);
-      exampleValueLine.click(); // this unfocuses the line on mobile
-      previousShown = elem;
-    };
-
-    hideValue = (elem) => {
-      elem.parentNode.querySelector('.visibility-off').style.display = 'none';
-      elem.parentNode.querySelector('.visibility').style.display = 'flex';
-      elem.parentNode.parentNode.querySelector('.key').style.flexShrink = 0;
-      elem.parentNode.parentNode.querySelector('.value').style.flexShrink = 2;
-      elem.parentNode.parentNode.querySelector('.value').innerHTML = '•'.repeat(getValue(elem).length);
-      exampleValueLine.click(); // this unfocuses the line on mobile
-    };
-
-    // eslint-disable-next-line no-unused-vars
-    copyValue = (elem) => {
-      alert(elem.parentNode.parentNode.dataset.value);
-    };
 
     const preventUnload = (e) => {
       e.preventDefault(); // this enables the unload warning message
@@ -1678,26 +1596,6 @@ h2 {
       setProperty('--display-save', 'inline');
       window.addEventListener('beforeunload', preventUnload); // activate reminder about unsaved content
     };
-
-    const addValue = (key, value) => {
-      const valueLine = exampleValueLine.cloneNode(true);
-      valueLine.removeAttribute('id');
-      valueLine.setAttribute('data-key', key);
-      valueLine.setAttribute('data-value', value);
-      hideValue(valueLine.querySelector('.visibility-off'));
-      valueLine.querySelector('.key').innerHTML = key;
-      keyValuePairs.appendChild(valueLine);
-    };
-
-    // handle adding new value-lines
-    valueAdd.addEventListener('click', (e) => {
-      e.preventDefault();
-      addValue(valuesForm.valueskey.value, valuesForm.valuesvalue.value);
-      valuesForm.valueskey.value = '';
-      valuesForm.valuesvalue.value = '';
-      valuesForm.valueskey.focus();
-      activateSaveButton();
-    });
 
     const downloadFile = (file) => {
       const tmpButton = document.createElement('a');
