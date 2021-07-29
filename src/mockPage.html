@@ -223,7 +223,6 @@ h2 {
 #text {
   padding: clamp(20px, 4vw, 96px);
   outline: none;
-  justify-self: center;
   margin: 1vw auto 6rem auto;
   min-height: 1157px;
   background-color: var(--col-secondary);
@@ -271,14 +270,13 @@ h2 {
   background-color: transparent;
   position: fixed;
   bottom: 0;
-  width: calc(100% - 4rem);
-  margin-left: 4rem;
+  width: 100%;
   z-index: 100;
   text-align:center;
 }
 
 /*large screen*/
-@media only screen and (min-width: 901px) {*
+@media only screen and (min-width: 1001px) {*
   #navbar {
     top: 0;
     width: 4rem;
@@ -305,7 +303,7 @@ h2 {
 }
 
 /*small screen*/
-@media only screen and (max-width: 900px) {
+@media only screen and (max-width: 1000px) {
   #grid {
     grid-template-areas:
       'text-container'
@@ -314,10 +312,15 @@ h2 {
     overflow-x: auto;
   }
 
+  #text-container {
+    justify-self: center;
+  }
+
   #text {
-    margin: 1rem;
     padding: 0.5rem;
-    min-height: max(10rem, 100vh - 25rem);
+    margin-top: 0.5rem;
+    width: calc(100vw - 2rem);
+    min-height: max(10rem, 100vh - 29rem);
   }
 
   #navbar{
