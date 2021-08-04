@@ -16,14 +16,8 @@ const data = `
 const VERSION = '0.0.1';
 const inBrowser = () => typeof window !== 'undefined';
 const dataEmpty = () => data === '\n';
-
-const checkNodeVersionSupported = () => {
-  const NODE_VERSION = process.versions.node;
-  if (NODE_VERSION.split('.')[0] < 15) {
-    console.log(`Uses Web Crypto API, Node 15 or higher required (current ${NODE_VERSION})`);
-    process.exit(1);
-  }
-};
+const nodeVersionSupported = () => !(process.versions.node.split('.')[0] < 15);
+const browserSupported = () => window.crypto?.subtle !== undefined;
 
 // set global variables based on the execution environment
 let subtle;
@@ -31,10 +25,17 @@ let getRandomValues;
 const utf8Encoder = new TextEncoder('utf-8');
 const DATA_LINE_LEN = 100;
 if (inBrowser()) {
+  if (!browserSupported()) {
+    document.body.innerHTML = '<p>classified.html requires a browser that supports <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API">Web Crypto API</a>. Please update or try some other browser.</p>';
+    throw new Error('classified.html requires a browser that supports Web Crypto API');
+  }
   subtle = window.crypto.subtle;
   getRandomValues = (arr) => window.crypto.getRandomValues(arr);
 } else {
-  checkNodeVersionSupported();
+  if (!nodeVersionSupported()) {
+    console.log(`classified.html uses Web Crypto API, Node.js version 15 or higher required (current version: ${process.versions.node})`);
+    process.exit(1);
+  }
   const crypto = require('crypto');
   subtle = crypto.webcrypto.subtle;
   getRandomValues = (buffer) => {
