@@ -737,6 +737,18 @@ SVG-TERMS
       window.addEventListener('beforeunload', preventUnload); // activate reminder about unsaved content
     };
 
+    /*
+     This handles automatically resizing textarea
+     */
+    const resize = () => {
+      dataInput.style.height = 'auto';
+      dataInput.style.height = dataInput.scrollHeight - 2 * parseInt(getComputedStyle(dataInput).paddingTop) + 'px';
+    };
+
+    dataInput.addEventListener('input', resize);
+    window.addEventListener('resize', resize);
+    resize();
+
     const downloadFile = (file) => {
       const tmpButton = document.createElement('a');
       tmpButton.href = URL.createObjectURL(file);
@@ -837,7 +849,7 @@ SVG-TERMS
     });
 
     saveButton.addEventListener('click', async (_) => {
-      await obtainFile(await encrypt(currentPassword, await encode(dataInput.innerText)), filename);
+      await obtainFile(await encrypt(currentPassword, await encode(dataInput.value)), filename);
 
       // reset saving functionality, user might continue use after save
       setProperty('--display-save', 'none');
@@ -857,7 +869,7 @@ SVG-TERMS
       setProperty('--display-main', 'inline');
 
       if (decryptedData !== undefined) {
-        dataInput.innerText = decryptedData;
+        dataInput.value = decryptedData;
       }
       dataInput.removeEventListener('input', activateSaveButton, { once: true }); // remove if previous still exists
       dataInput.addEventListener('input', activateSaveButton, { once: true });

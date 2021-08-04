@@ -1118,7 +1118,7 @@ This licence file is also available at https://github.com/google/material-design
   </div>
 
   <div id="text-container">
-    <div id="text" contenteditable="true" spellcheck="false" placeholder="type here..."></div>
+      <textarea id="text" spellcheck="false" autocomplete="off" placeholder="type here..."></textarea>
   </div>
 </div>
 
@@ -1344,18 +1344,22 @@ h2 {
 }
 
 #text {
+  display: block;
   padding: clamp(20px, 4vw, 96px);
   outline: none;
   margin: 1vw auto 6rem auto;
   min-height: 1157px;
   background-color: var(--col-secondary);
   font-family: 'Courier New', Courier, monospace;
-  height:auto;
-  max-width: 818px;
+  height: auto;
+  resize: horizontal;
+  width: 818px;
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
   text-align: left;
   overflow-wrap: anywhere; /* other option: overflow-wrap:normal; overflow: hidden; overflow-x: scroll; */
   transition: 150ms;
+  border: 0;
+  overflow: hidden;
 }
 
 #text:focus-within {
@@ -1444,6 +1448,7 @@ h2 {
     margin-top: 0.5rem;
     width: calc(100vw - 2rem);
     min-height: max(10rem, 100vh - 29rem);
+    resize: none;
   }
 
   #navbar{
@@ -1523,11 +1528,6 @@ h2 {
 #navbar:hover .hide-when-not-main {
   display: var(--display-main);
 }
-
-[contenteditable=true][placeholder]:empty:before{
-  content:attr(placeholder);
-  color:var(--col-tertiary)
-}
 `;
     document.head.append(style);
     document.title = filename;
@@ -1551,6 +1551,18 @@ h2 {
       setProperty('--display-save', 'inline');
       window.addEventListener('beforeunload', preventUnload); // activate reminder about unsaved content
     };
+
+    /*
+     This handles automatically resizing textarea
+     */
+    const resize = () => {
+      dataInput.style.height = 'auto';
+      dataInput.style.height = dataInput.scrollHeight - 2 * parseInt(getComputedStyle(dataInput).paddingTop) + 'px';
+    };
+
+    dataInput.addEventListener('input', resize);
+    window.addEventListener('resize', resize);
+    resize();
 
     const downloadFile = (file) => {
       const tmpButton = document.createElement('a');
@@ -1652,7 +1664,7 @@ h2 {
     });
 
     saveButton.addEventListener('click', async (_) => {
-      await obtainFile(await encrypt(currentPassword, await encode(dataInput.innerText)), filename);
+      await obtainFile(await encrypt(currentPassword, await encode(dataInput.value)), filename);
 
       // reset saving functionality, user might continue use after save
       setProperty('--display-save', 'none');
@@ -1672,7 +1684,7 @@ h2 {
       setProperty('--display-main', 'inline');
 
       if (decryptedData !== undefined) {
-        dataInput.innerText = decryptedData;
+        dataInput.value = decryptedData;
       }
       dataInput.removeEventListener('input', activateSaveButton, { once: true }); // remove if previous still exists
       dataInput.addEventListener('input', activateSaveButton, { once: true });

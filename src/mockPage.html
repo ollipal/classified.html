@@ -221,18 +221,22 @@ h2 {
 }
 
 #text {
+  display: block;
   padding: clamp(20px, 4vw, 96px);
   outline: none;
   margin: 1vw auto 6rem auto;
   min-height: 1157px;
   background-color: var(--col-secondary);
   font-family: 'Courier New', Courier, monospace;
-  height:auto;
-  max-width: 818px;
+  height: auto;
+  resize: horizontal;
+  width: 818px;
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
   text-align: left;
   overflow-wrap: anywhere; /* other option: overflow-wrap:normal; overflow: hidden; overflow-x: scroll; */
   transition: 150ms;
+  border: 0;
+  overflow: hidden;
 }
 
 #text:focus-within {
@@ -321,6 +325,7 @@ h2 {
     margin-top: 0.5rem;
     width: calc(100vw - 2rem);
     min-height: max(10rem, 100vh - 29rem);
+    resize: none;
   }
 
   #navbar{
@@ -401,11 +406,6 @@ h2 {
   display: var(--display-main);
 }
 
-[contenteditable=true][placeholder]:empty:before{
-  content:attr(placeholder);
-  color:var(--col-tertiary)
-}
-
 /*CSS*/
   </style>
 </head>
@@ -440,7 +440,7 @@ h2 {
   </div>
 
   <div id="text-container">
-    <div id="text" contenteditable="true" spellcheck="false" placeholder="type here..."></div>
+      <textarea id="text" spellcheck="false" autocomplete="off" placeholder="type here..."></textarea>
   </div>
 </div>
 
@@ -648,6 +648,20 @@ SVG-TERMS
     //root.style.setProperty('--display-form', "none");
     //root.style.setProperty('--display-repw', "none");
     //root.style.setProperty('--display-main', "inline");
+
+    const dataInput = document.getElementById('text');
+
+    /*
+     * This handles automatically resizing textarea 
+     */
+    const resize = () => { 
+      dataInput.style.height = 'auto';
+      dataInput.style.height = dataInput.scrollHeight - 2 * parseInt(getComputedStyle(dataInput).paddingTop) + 'px';
+    }
+
+    dataInput.addEventListener('input', resize);
+    window.addEventListener('resize', resize);
+    resize();
 
     formSubmit.addEventListener("click", (e) => {
       e.preventDefault();
