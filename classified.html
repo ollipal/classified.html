@@ -743,10 +743,35 @@ Example usage:
     }
   };
 
+  const parseRow = (commandData) => {
+    const [rowString, ...rest] = commandData.split(' ');
+    const row = parseInt(rowString);
+    const command = rest.join(' ');
+    let errorString;
+    if (isNaN(row) || row < 0) {
+      errorString = `not a proper row: ${rowString}`;
+    }
+    if (command === '') {
+      errorString = 'command data missing';
+    }
+    return [row, command, errorString];
+  };
+
   const addText = (commandData) => {
     changes = true;
     rows.push(commandData);
     return 'new row added';
+  };
+
+  const addRow = (commandData) => {
+    const [row, command, errorString] = parseRow(commandData);
+    if (errorString !== undefined) return errorString;
+    if (row <= rows.length + 1) {
+      rows.splice(row - 1, 0, command);
+      return 'new row added';
+    } else {
+      return `row index too high: ${row}, use 'add row ${rows.length + 1}' or 'add text' to add row to the end`;
+    }
   };
 
   const deleteText = () => {
@@ -769,15 +794,10 @@ Example usage:
   };
 
   const replaceRow = (commandData) => {
-    const [row, ...rest] = commandData.split(' ');
-    if (isNaN(parseInt(row))) {
-      return `not a proper row: ${row}`;
-    }
-    if (rest.length === 0) {
-      return 'replace data missing';
-    }
-    if (row > 0 && row < rows.length + 1) {
-      rows[row - 1] = rest.join(' ');
+    const [row, command, errorString] = parseRow(commandData);
+    if (errorString !== undefined) return errorString;
+    if (row < rows.length + 1) {
+      rows[row - 1] = command;
       return `row ${row} replaced`;
     } else {
       return `could not replace row ${row}`;
@@ -812,6 +832,8 @@ Example usage:
       handleMessage = helpString + '\n';
     } else if (command === 'add' && target === 'text' && commandData !== undefined) {
       handleMessage = addText(commandData);
+    } else if (command === 'add' && target === 'row' && commandData !== undefined) {
+      handleMessage = addRow(commandData);
     } else if (command === 'delete' && target === 'text' && commandData === undefined) {
       handleMessage = deleteText();
     } else if (command === 'delete' && target === 'row' && !isNaN(parseInt(commandData))) {
@@ -869,7 +891,7 @@ Example usage:
       process.exit();
     }
 
-    let hints = ['add text ', 'exit', 'discard', 'help', 'delete row ', 'replace row '];
+    let hints = ['add text ', 'exit', 'discard', 'help', 'delete row ', 'replace row ', 'add row '];
     let handled, message;
     while (true) {
       printContents();
