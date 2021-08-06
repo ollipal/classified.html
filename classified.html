@@ -453,7 +453,6 @@ if (!inBrowser()) { // executed in Node.js
    */
 
   const fs = require('fs');
-  const os = require('os');
   const readline = require('readline');
   const path = require('path');
   const filename = path.basename(__filename);
@@ -700,23 +699,42 @@ Example usage:
   */
   const saveChanges = async (password, text) => {
     if (dataEmpty() || changes) {
-      // copy file to tmp file, and rename
-      try {
-        const tmpPath = path.join(os.tmpdir(), filename);
-        const source = fs.readFileSync(__filename, 'utf8');
-        const updatedData = await encrypt(password, await encode(text));
-        const updatedSource = updateSourceData(source, updatedData);
-        fs.writeFileSync(tmpPath, updatedSource);
-        fs.renameSync(tmpPath, __filename);
-        console.log('changes saved!');
-      } catch (err) {
-        console.log(`could not save ${__filename}:\n${err}`);
-      };
+      // generate source
+      const source = fs.readFileSync(__filename, 'utf8');
+      const updatedData = await encrypt(password, await encode(text));
+      const updatedSource = updateSourceData(source, updatedData);
+
+      let triesLeft = 10;
+      while (true) {
+        // get temporary path to a file that does not yet exist
+        const tempPath = `${__filename}_temp-${require('crypto').randomBytes(10).toString('hex')}`;
+        if (fs.existsSync(tempPath)) {
+          if (triesLeft === 0) {
+            console.log(`could not save ${__filename}: could not generate temp path`);
+            break;
+          }
+          triesLeft--;
+          continue;
+        }
+
+        // copy file to temp file, and rename
+        try {
+          fs.writeFileSync(tempPath, updatedSource, { flag: 'wx' });
+          fs.renameSync(tempPath, __filename);
+          console.log('changes saved!');
+          break;
+        } catch (err) {
+          if (triesLeft === 0) {
+            console.log(`could not save ${__filename}:\n${err}`);
+            break;
+          }
+          triesLeft--;
+        };
+      }
     } else {
       console.log('no changes to save');
     }
   };
-
   /*
   Command handling helpers:
   */
