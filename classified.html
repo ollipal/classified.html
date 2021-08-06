@@ -457,6 +457,7 @@ if (!inBrowser()) { // executed in Node.js
   const readline = require('readline');
   const path = require('path');
   const filename = path.basename(__filename);
+  const args = process.argv.slice(2);
   const helpString = `classified.html version ${VERSION}
 Open in browser or with Node.js by running 'node ${filename}'
 
@@ -476,6 +477,7 @@ COMMANDS:
     exit        save and exit, same as the default when the command is left empty
     discard     discard changes, clear concole and quit, same as pressing ctrl+c
     password    change password. Will ask the new one if not spesified in in TARGET
+    debug       put 'debug' before COMMAND to disable clearing the console
 
 TARGETS:
   text          all of the text
@@ -490,6 +492,28 @@ Example usage:
   let changes = false;
   let waitingForCommand = false;
   let rl; // readLine interface
+  let debugging = false;
+
+  // clear console if not debugging, seems to work on all major platforms: https://stackoverflow.com/a/32899667 should be tested more
+  const clearConsole = () => { if (!debugging) process.stdout.write('\x1Bc'); };
+
+  // put into debug mode if requested and remove the debug command from args
+  if (args.length > 0 && ['-d', '--debug', 'debug'].includes(args[0])) {
+    debugging = true;
+    args.shift();
+  }
+
+  // always clear the console on exit if exit has not been marked to be handled properly and not debugging
+  let exitHandled = false;
+  if (!debugging) {
+    process.on('exit', (code) => {
+      if (!exitHandled) {
+        clearConsole();
+        console.log('possible changes discarded');
+      }
+      process.exit(code);
+    });
+  }
 
   /*
   prompt from: https://github.com/ollipal/minimal-password-prompt
@@ -538,19 +562,6 @@ Example usage:
       process.stdout.write(question);
     })
   );
-
-  // clear console, seems to work on all major platforms: https://stackoverflow.com/a/32899667 should be tested more
-  const clearConsole = () => process.stdout.write('\x1Bc');
-
-  // always clear the console on exit if exit has not been marked to be handled properly
-  let exitHandled = false;
-  process.on('exit', (code) => {
-    if (!exitHandled) {
-      clearConsole();
-      console.log('possible changes discarded');
-    }
-    process.exit(code);
-  });
 
   // write to global readline, if resized when waiting for a command
   process.stdout.on('resize', () => {
@@ -856,7 +867,7 @@ Example usage:
 
   (async () => {
     // parse commands passed through args
-    const [command, target, commandData] = parseCommand(process.argv.slice(2).join(' '));
+    const [command, target, commandData] = parseCommand(args.join(' '));
 
     // handle the cases whitch do not require password
     if (['-h', '--help', 'help'].includes(command)) {
