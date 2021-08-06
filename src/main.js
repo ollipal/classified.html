@@ -611,6 +611,16 @@ Example usage:
     }
   };
 
+  const showText = () => rows.join('\n');
+
+  const showRow = (commandData) => {
+    const row = parseInt(commandData.split(' ')[0]);
+    if (isNaN(row) || row < 1 || row > rows.length) {
+      return 'not a proper row';
+    }
+    return rows[row - 1];
+  };
+
   const changePassword = async () => {
     clearConsole();
     console.log('changing password:');
@@ -647,6 +657,10 @@ Example usage:
       handleMessage = deleteRow(parseInt(commandData));
     } else if (command === 'delete' && target === 'row' && commandData === undefined) {
       handleMessage = 'row number to delete missing';
+    } else if (command === 'show' && target === 'text' && commandData === undefined) {
+      handleMessage = showText();
+    } else if (command === 'show' && target === 'row' && commandData !== undefined) {
+      handleMessage = showRow(commandData);
     } else if (command === 'replace' && target === 'text' && commandData !== undefined) {
       handleMessage = replaceText(commandData);
     } else if (command === 'replace' && target === 'text' && commandData === undefined) {
@@ -690,6 +704,10 @@ Example usage:
       clearConsole();
       if (handled) {
         if (message) console.log(message + '\n');
+        if (command === 'show') {
+          await question('(press enter to exit)');
+          clearConsole();
+        }
         await saveChanges(password, rows.join('\n'));
       } else {
         console.log('error: could not handle command');
