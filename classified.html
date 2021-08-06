@@ -491,7 +491,7 @@ Example usage:
   let password, rows;
   let changes = false;
   let waitingForCommand = false;
-  let rl; // readLine interface
+  let readLineInterface;
   let debugging = false;
 
   // clear console if not debugging, seems to work on all major platforms: https://stackoverflow.com/a/32899667 should be tested more
@@ -565,7 +565,7 @@ Example usage:
 
   // write to global readline, if resized when waiting for a command
   process.stdout.on('resize', () => {
-    if (waitingForCommand) rl.write('resize\n');
+    if (waitingForCommand) readLineInterface.write('resize\n');
   });
 
   /*
@@ -655,29 +655,29 @@ Example usage:
   /*
   Ask question and wait for reply.
   Allow using up/down arrows for prefilling options if given.
-  rl can be written outside, if terminal is resized when waiting for command.
+  readLineInterface can be written outside, if terminal is resized when waiting for command.
   */
   const question = (question, previous = []) => new Promise(resolve => {
-    rl = readline.createInterface({
+    readLineInterface = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
 
     const maxPreviousIndex = previous.length - 1;
     let previousIndex = -1;
-    const clearLine = () => rl.write(null, { ctrl: true, name: 'u' });
+    const clearLine = () => readLineInterface.write(null, { ctrl: true, name: 'u' });
     const reactUpDown = (input) => {
       if (input === '\u001b[A') { // arrow up
         if (previousIndex < maxPreviousIndex) {
           previousIndex++;
           clearLine();
-          rl.write(previous[previousIndex]);
+          readLineInterface.write(previous[previousIndex]);
         }
       } else if (input === '\u001b[B') { // down arrow
         if (previousIndex > -1) {
           previousIndex--;
           clearLine();
-          rl.write(previous[previousIndex]);
+          readLineInterface.write(previous[previousIndex]);
         } else {
           clearLine();
         }
@@ -685,9 +685,9 @@ Example usage:
     };
 
     process.stdin.on('data', reactUpDown);
-    rl.question(question, (reply) => {
+    readLineInterface.question(question, (reply) => {
       process.stdin.removeListener('data', reactUpDown);
-      rl.close();
+      readLineInterface.close();
       resolve(reply);
     });
   });
