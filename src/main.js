@@ -279,7 +279,7 @@ COMMANDS:
 
 TARGETS:
   text          all of the text
-  row ROWNUM    some spesific row of text, for example 'row 5'
+  row ID        row of text. ID can be a number or a start of the line, for example 'row 5' or 'row the'
 
 Example usage:
   add text This is classified.html    append 'This is classified.html' row to text
@@ -552,19 +552,31 @@ Example usage:
     }
   };
 
-  const parseRow = (commandData) => {
+  const onlyDigits = rowString => [...rowString].every(c => '0123456789'.includes(c));
+
+  const parseRow = (commandData, multipleRowsAllowed = false) => {
     const rowString = commandData.split(' ')[0];
-    const row = parseInt(rowString);
     let errorString;
-    if (isNaN(row) || row <= 0) errorString = `not a proper row: ${rowString}`;
-    return [row, errorString];
+    if (onlyDigits(rowString)) {
+      const rowNumber = parseInt(rowString);
+      if (isNaN(rowNumber) || rowNumber <= 0) errorString = `not a proper row: ${rowString}`;
+      return [[rowNumber], errorString];
+    } else {
+      const rowNumbers = [];
+      for (const [i, row] of rows.entries()) {
+        if (row.startsWith(rowString)) rowNumbers.push(i + 1);
+      }
+      if (rowNumbers.length === 0) errorString = `no row matches: ${rowString}`;
+      if (!multipleRowsAllowed && rowNumbers.length > 1) errorString = `multiple row matches: ${rowNumbers.length}`;
+      return [rowNumbers, errorString];
+    }
   };
 
-  const parseRowCommand = (commandData) => {
-    let [row, errorString] = parseRow(commandData);
+  const parseRowCommand = (commandData, multipleRowsAllowed = false) => {
+    let [rowNumbers, errorString] = parseRow(commandData, multipleRowsAllowed);
     const command = commandData.split(' ').slice(1).join(' ');
     if (command === '') errorString = 'command data missing';
-    return [row, command, errorString];
+    return [rowNumbers, command, errorString];
   };
 
   const addText = (commandData) => {
@@ -574,20 +586,22 @@ Example usage:
   };
 
   const addRow = (commandData) => {
-    const [row, command, errorString] = parseRowCommand(commandData);
+    const [rowNumbers, command, errorString] = parseRowCommand(commandData);
     if (errorString !== undefined) return errorString;
-    if (row > rows.length + 1) return `row index too high: ${row}, use 'add row ${rows.length + 1}' or 'add text' to add row to the end`;
-    rows.splice(row - 1, 0, command);
+    const rowNumber = rowNumbers[0];
+    if (rowNumber > rows.length + 1) return `row index too high: ${rowNumber}, use 'add row ${rows.length + 1}' or 'add text' to add row to the end`;
+    rows.splice(rowNumber - 1, 0, command);
     return 'new row added';
   };
 
   const modifyRow = async (commandData) => {
-    const [row, errorString] = parseRow(commandData);
+    const [rowNumbers, errorString] = parseRow(commandData);
     if (errorString !== undefined) return errorString;
-    if (row > rows.length) return `row index too high: ${row}`;
+    const rowNumber = rowNumbers[0];
+    if (rowNumber > rows.length) return `row index too high: ${rowNumber}`;
     clearConsole();
-    rows[row - 1] = await question('', [], rows[row - 1]);
-    return `row ${row} modified`;
+    rows[rowNumber - 1] = await question('', [], rows[rowNumber - 1]);
+    return `row ${rowNumber} modified`;
   };
 
   const deleteText = () => {
@@ -596,11 +610,12 @@ Example usage:
   };
 
   const deleteRow = (commandData) => {
-    const [row, errorString] = parseRow(commandData);
+    const [rowNumbers, errorString] = parseRow(commandData);
     if (errorString !== undefined) return errorString;
-    if (row > rows.length) return `row index too high: ${row}`;
-    rows.splice(row - 1, 1);
-    return `row ${row} deleted`;
+    const rowNumber = rowNumbers[0];
+    if (rowNumber > rows.length) return `row index too high: ${rowNumber}`;
+    rows.splice(rowNumber - 1, 1);
+    return `row ${rowNumber} deleted`;
   };
 
   const replaceText = (commandData) => {
@@ -609,23 +624,28 @@ Example usage:
   };
 
   const replaceRow = (commandData) => {
-    const [row, command, errorString] = parseRowCommand(commandData);
+    const [rowNumbers, command, errorString] = parseRowCommand(commandData);
     if (errorString !== undefined) return errorString;
-    if (row < rows.length + 1) {
-      rows[row - 1] = command;
-      return `row ${row} replaced`;
+    const rowNumber = rowNumbers[0];
+    if (rowNumber < rows.length + 1) {
+      rows[rowNumber - 1] = command;
+      return `row ${rowNumber} replaced`;
     } else {
-      return `could not replace row ${row}`;
+      return `could not replace row ${rowNumber}`;
     }
   };
 
   const showText = () => rows.join('\n');
 
   const showRow = (commandData) => {
-    const [row, errorString] = parseRow(commandData);
+    const [rowNumbers, errorString] = parseRow(commandData, true);
     if (errorString !== undefined) return errorString;
-    if (row > rows.length) return `row index too high: ${row}`;
-    return rows[row - 1];
+    let result = '';
+    for (const rowNumber of rowNumbers) {
+      if (rowNumber > rows.length) return `row index too high: ${row}`;
+      result += rows[rowNumber - 1] + '\n';
+    }
+    return result.slice(0, -1); // remove extra newline
   };
 
   const changePassword = async () => {
