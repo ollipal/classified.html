@@ -13,7 +13,7 @@ const data = `
  * Shared code and functions for all platforms
  */
 
-const VERSION = '0.0.1';
+const VERSION = '0.0.2';
 const inBrowser = () => typeof window !== 'undefined';
 const dataEmpty = () => data === '\n';
 const nodeVersionSupported = () => !(process.versions.node.split('.')[0] < 15);
