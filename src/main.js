@@ -264,6 +264,7 @@ Advanced usage: node ${filename} [COMMAND [TARGET [DATA...]]]
 COMMANDS:
   Data modifying commands:
     add         add DATA to TARGET
+    modify      modify current TARGETs data
     replace     replace existing data with DATA on TARGET
     delete      delete TARGET and its data
     show        show TARGET's data on the terminal
@@ -454,7 +455,7 @@ Example usage:
   Allow using up/down arrows for prefilling options if given.
   readLineInterface can be written outside, if terminal is resized when waiting for command.
   */
-  const question = (question, previous = []) => new Promise(resolve => {
+  const question = (question, previous = [], placeholder) => new Promise(resolve => {
     readLineInterface = readline.createInterface({
       input: process.stdin,
       output: process.stdout
@@ -487,6 +488,7 @@ Example usage:
       readLineInterface.close();
       resolve(reply);
     });
+    if (placeholder) readLineInterface.write(placeholder);
   });
 
   /*
@@ -551,16 +553,17 @@ Example usage:
   };
 
   const parseRow = (commandData) => {
-    const [rowString, ...rest] = commandData.split(' ');
+    const rowString = commandData.split(' ')[0];
     const row = parseInt(rowString);
-    const command = rest.join(' ');
     let errorString;
-    if (isNaN(row) || row < 0) {
-      errorString = `not a proper row: ${rowString}`;
-    }
-    if (command === '') {
-      errorString = 'command data missing';
-    }
+    if (isNaN(row) || row <= 0) errorString = `not a proper row: ${rowString}`;
+    return [row, errorString];
+  };
+
+  const parseRowCommand = (commandData) => {
+    let [row, errorString] = parseRow(commandData);
+    const command = commandData.split(' ').slice(1).join(' ');
+    if (command === '') errorString = 'command data missing';
     return [row, command, errorString];
   };
 
@@ -571,14 +574,20 @@ Example usage:
   };
 
   const addRow = (commandData) => {
-    const [row, command, errorString] = parseRow(commandData);
+    const [row, command, errorString] = parseRowCommand(commandData);
     if (errorString !== undefined) return errorString;
-    if (row <= rows.length + 1) {
-      rows.splice(row - 1, 0, command);
-      return 'new row added';
-    } else {
-      return `row index too high: ${row}, use 'add row ${rows.length + 1}' or 'add text' to add row to the end`;
-    }
+    if (row > rows.length + 1) return `row index too high: ${row}, use 'add row ${rows.length + 1}' or 'add text' to add row to the end`;
+    rows.splice(row - 1, 0, command);
+    return 'new row added';
+  };
+
+  const modifyRow = async (commandData) => {
+    const [row, errorString] = parseRow(commandData);
+    if (errorString !== undefined) return errorString;
+    if (row > rows.length) return `row index too high: ${row}`;
+    clearConsole();
+    rows[row - 1] = await question('', [], rows[row - 1]);
+    return `row ${row} modified`;
   };
 
   const deleteText = () => {
@@ -586,13 +595,12 @@ Example usage:
     return 'text deleted';
   };
 
-  const deleteRow = (row) => {
-    if (row > 0 && row < rows.length + 1) {
-      rows.splice(row - 1, 1);
-      return `row ${row} deleted`;
-    } else {
-      return `could not delete row ${row}`;
-    }
+  const deleteRow = (commandData) => {
+    const [row, errorString] = parseRow(commandData);
+    if (errorString !== undefined) return errorString;
+    if (row > rows.length) return `row index too high: ${row}`;
+    rows.splice(row - 1, 1);
+    return `row ${row} deleted`;
   };
 
   const replaceText = (commandData) => {
@@ -601,7 +609,7 @@ Example usage:
   };
 
   const replaceRow = (commandData) => {
-    const [row, command, errorString] = parseRow(commandData);
+    const [row, command, errorString] = parseRowCommand(commandData);
     if (errorString !== undefined) return errorString;
     if (row < rows.length + 1) {
       rows[row - 1] = command;
@@ -614,10 +622,9 @@ Example usage:
   const showText = () => rows.join('\n');
 
   const showRow = (commandData) => {
-    const row = parseInt(commandData.split(' ')[0]);
-    if (isNaN(row) || row < 1 || row > rows.length) {
-      return 'not a proper row';
-    }
+    const [row, errorString] = parseRow(commandData);
+    if (errorString !== undefined) return errorString;
+    if (row > rows.length) return `row index too high: ${row}`;
     return rows[row - 1];
   };
 
@@ -651,10 +658,14 @@ Example usage:
       handleMessage = addText(commandData);
     } else if (command === 'add' && target === 'row' && commandData !== undefined) {
       handleMessage = addRow(commandData);
+    } else if (command === 'modify' && target === 'row' && commandData !== undefined) {
+      handleMessage = await modifyRow(commandData);
+    } else if (command === 'modify' && target === 'text') {
+      handleMessage = 'currently modify works only on rows';
     } else if (command === 'delete' && target === 'text' && commandData === undefined) {
       handleMessage = deleteText();
-    } else if (command === 'delete' && target === 'row' && !isNaN(parseInt(commandData))) {
-      handleMessage = deleteRow(parseInt(commandData));
+    } else if (command === 'delete' && target === 'row' && commandData !== undefined) {
+      handleMessage = deleteRow(commandData);
     } else if (command === 'delete' && target === 'row' && commandData === undefined) {
       handleMessage = 'row number to delete missing';
     } else if (command === 'show' && target === 'text' && commandData === undefined) {
@@ -716,7 +727,7 @@ Example usage:
       process.exit();
     }
 
-    let hints = ['add text ', 'exit', 'discard', 'help', 'delete row ', 'replace row ', 'add row '];
+    let hints = ['add text ', 'exit', 'discard', 'help', 'delete row ', 'replace row ', 'add row ', 'show row ', 'modify row '];
     let handled, message;
     while (true) {
       printContents();
