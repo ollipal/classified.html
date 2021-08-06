@@ -263,17 +263,16 @@ Advanced usage: node ${filename} [COMMAND [TARGET [DATA...]]]
 COMMANDS:
   Data modifying commands:
     add         add DATA to TARGET
-    modify      modify current TARGETs data
     replace     replace existing data with DATA on TARGET
     delete      delete TARGET and its data
     show        show TARGET's data on the terminal
-    password    change password. Will ask the new one if not spesified in in TARGET
 
   Other commands:
     new         download empty classified.html. Will ask for save location if not specified in TARGET
     help        show this help message
     exit        save and exit, same as the default when the command is left empty
     discard     discard changes, clear concole and quit, same as pressing ctrl+c
+    password    change password. Will ask the new one if not spesified in in TARGET
 
 TARGETS:
   text          all of the text
