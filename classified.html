@@ -28,11 +28,22 @@ SOFTWARE.
 const data = `
 `;// data end
 
-/*
- * Below is base64-js's index.js from: https://github.com/beatgammit/base64-js/blob/master/index.js
- * This library allows consistent base64 encoding between browsers and Node.js
- * 2021-02-20, commit 88957c9943c7e2a0f03cdf73e71d579e433627d3
- * Modifications: this comment, and the comment at the end, exports have been commented out
+try { // catch errors for displaying alerts if in browser
+  /*
+  * Shared code and functions for all platforms
+  */
+
+  const VERSION = '0.0.2';
+  const inBrowser = () => typeof window !== 'undefined';
+  const dataEmpty = () => data === '\n';
+  const nodeVersionSupported = () => !(process.versions.node.split('.')[0] < 15);
+  const browserSupported = () => window.crypto?.subtle !== undefined;
+
+  /*
+  * Below is base64-js's index.js from: https://github.com/beatgammit/base64-js/blob/master/index.js
+  * This library allows consistent base64 encoding between browsers and Node.js
+  * 2021-02-20, commit 88957c9943c7e2a0f03cdf73e71d579e433627d3
+  * Modifications: this comment, and the comment at the end, exports have been commented out
 
 The MIT License (MIT)
 
@@ -208,793 +219,783 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-/*
- * base64-js end
- */
+  /*
+  * base64-js end
+  */
 
-/*
- * Shared code and functions for all platforms
- */
-
-const VERSION = '0.0.2';
-const inBrowser = () => typeof window !== 'undefined';
-const dataEmpty = () => data === '\n';
-const nodeVersionSupported = () => !(process.versions.node.split('.')[0] < 15);
-const browserSupported = () => window.crypto?.subtle !== undefined;
-
-// set global variables based on the execution environment
-let subtle;
-let getRandomValues;
-const utf8Encoder = new TextEncoder('utf-8');
-const DATA_LINE_LEN = 100;
-if (inBrowser()) {
-  if (!browserSupported()) {
-    document.body.innerHTML = '<p>classified.html requires a browser that supports <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API">Web Crypto API</a>. Please update or try some other browser.</p>';
-    throw new Error('classified.html requires a browser that supports Web Crypto API');
+  // set global variables based on the execution environment
+  let subtle;
+  let getRandomValues;
+  const utf8Encoder = new TextEncoder('utf-8');
+  const DATA_LINE_LEN = 100;
+  if (inBrowser()) {
+    if (!browserSupported()) {
+      document.body.innerHTML = '<p>classified.html requires a browser that supports <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API">Web Crypto API</a>. Please update or try some other browser.</p>';
+      throw new Error('classified.html requires a browser that supports Web Crypto API');
+    }
+    subtle = window.crypto.subtle;
+    getRandomValues = (arr) => window.crypto.getRandomValues(arr);
+  } else {
+    if (!nodeVersionSupported()) {
+      console.log(`classified.html uses Web Crypto API, Node.js version 15 or higher required (current version: ${process.versions.node})`);
+      process.exit(1);
+    }
+    const crypto = require('crypto');
+    subtle = crypto.webcrypto.subtle;
+    getRandomValues = (buffer) => {
+      buffer.set(crypto.randomBytes(buffer.length));
+      return buffer;
+    };
   }
-  subtle = window.crypto.subtle;
-  getRandomValues = (arr) => window.crypto.getRandomValues(arr);
-} else {
-  if (!nodeVersionSupported()) {
-    console.log(`classified.html uses Web Crypto API, Node.js version 15 or higher required (current version: ${process.versions.node})`);
-    process.exit(1);
-  }
-  const crypto = require('crypto');
-  subtle = crypto.webcrypto.subtle;
-  getRandomValues = (buffer) => {
-    buffer.set(crypto.randomBytes(buffer.length));
-    return buffer;
+
+  /*
+  Convert a long data string to parts of certain length for storage
+  */
+  const toLines = (str) => {
+    const numLines = Math.ceil(str.length / DATA_LINE_LEN);
+    const lines = new Array(numLines);
+    for (let i = 0, start = 0; i < numLines; ++i, start += DATA_LINE_LEN) {
+      lines[i] = str.substr(start, DATA_LINE_LEN);
+    }
+    return lines.join('\n');
   };
-}
 
-/*
-Convert a long data string to parts of certain length for storage
-*/
-const toLines = (str) => {
-  const numLines = Math.ceil(str.length / DATA_LINE_LEN);
-  const lines = new Array(numLines);
-  for (let i = 0, start = 0; i < numLines; ++i, start += DATA_LINE_LEN) {
-    lines[i] = str.substr(start, DATA_LINE_LEN);
-  }
-  return lines.join('\n');
-};
+  /*
+  Convert array buffer to storable base64 characters
+  */
+  const arrayBufferToBase64 = (buf) => fromByteArray(new Uint8Array(buf));
 
-/*
-Convert array buffer to storable base64 characters
-*/
-const arrayBufferToBase64 = (buf) => fromByteArray(new Uint8Array(buf));
-
-/*
-Helper for storing user data in a recoverable way as a string
-*/
-const encryptionValuesToStrorableSring = (salt, iv, encrypted) => (
-  `salt:${salt.join('-')}\niv:${iv.join('-')}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}\n`
-);
-
-/*
-Helper for recovering stored data from string
-*/
-const encryptionValuesFromStroredSring = (str) => {
-  const lines = str.split(/\r?\n|\r/g);
-  const salt = new Uint8Array(lines[1].replace('salt:', '').split('-'));
-  const iv = new Uint8Array(lines[2].replace('iv:', '').split('-'));
-  const data = lines.splice(4).join('');
-  return { salt, iv, data };
-};
-
-/*
-Placeholder data to always have home some data to encrypt.
-This because on node decrypt seems to fail if there
-was no data when it was encrypted (Node.js v15.9.0)
-*/
-const placeholderData = 'classified.html\n';
-
-/*
-First derive key material from password and salt,
-then use keymaterial and salt to derive an AES-GCM key using PBKDF2.
-*/
-const getKey = async (password, salt) => {
-  const keyMaterial = await subtle.importKey(
-    'raw',
-    utf8Encoder.encode(password),
-    { name: 'PBKDF2' },
-    false,
-    ['deriveKey']
+  /*
+  Helper for storing user data in a recoverable way as a string
+  */
+  const encryptionValuesToStrorableSring = (salt, iv, encrypted) => (
+    `salt:${salt.join('-')}\niv:${iv.join('-')}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}\n`
   );
 
-  return subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: salt,
-      iterations: 100000,
-      hash: 'SHA-512'
-    },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    true,
-    ['encrypt', 'decrypt']
-  );
-};
+  /*
+  Helper for recovering stored data from string
+  */
+  const encryptionValuesFromStroredSring = (str) => {
+    const lines = str.split(/\r?\n|\r/g);
+    const salt = new Uint8Array(lines[1].replace('salt:', '').split('-'));
+    const iv = new Uint8Array(lines[2].replace('iv:', '').split('-'));
+    const data = lines.splice(4).join('');
+    return { salt, iv, data };
+  };
 
-/*
-Derive a key from a password supplied by the user, and use the key
-to encrypt the message.
-Return a storable string that contains salt, initialization vector and the
-encrypted data encoded with base64.
-*/
-const encrypt = async (password, message) => {
-  const salt = getRandomValues(new Uint8Array(16));
-  const iv = getRandomValues(new Uint8Array(12));
-  const key = await getKey(password, salt);
+  /*
+  Placeholder data to always have home some data to encrypt.
+  This because on node decrypt seems to fail if there
+  was no data when it was encrypted (Node.js v15.9.0)
+  */
+  const placeholderData = 'classified.html\n';
 
-  const encrypted = await subtle.encrypt(
-    {
-      name: 'AES-GCM',
-      iv
-    },
-    key,
-    utf8Encoder.encode(placeholderData + message)
-  );
-
-  return encryptionValuesToStrorableSring(salt, iv, encrypted);
-};
-
-/*
-Derive a key from a password supplied by the user, and use the key
-to decrypt the ciphertext.
-If the ciphertext was decrypted successfully,
-update the "decryptedValue" box with the decrypted value.
-If there was an error decrypting,
-update the "decryptedValue" box with an error message.
-*/
-const decrypt = async (password, data) => {
-  const parsedData = encryptionValuesFromStroredSring(data);
-  const key = await getKey(password, parsedData.salt);
-
-  try {
-    const decrypted = await subtle.decrypt(
-      {
-        name: 'AES-GCM',
-        iv: parsedData.iv
-      },
-      key,
-      toByteArray(parsedData.data)
+  /*
+  First derive key material from password and salt,
+  then use keymaterial and salt to derive an AES-GCM key using PBKDF2.
+  */
+  const getKey = async (password, salt) => {
+    const keyMaterial = await subtle.importKey(
+      'raw',
+      utf8Encoder.encode(password),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
     );
 
-    const dec = new TextDecoder('utf-8', { fatal: true });
-    const message = dec.decode(decrypted).slice(placeholderData.length);
-    return { data: message, success: true };
-  } catch (e) {
-    return { data: '', success: false };
-  }
-};
-
-/*
-Remove the old data from source and insert new
-*/
-const updateSourceData = (source, data) => {
-  const sourceStart = source.split('const data' + ' = `')[0] + 'const data' + ' = `\n';
-  const sourceEnd = '\`;// ' + 'data end' + source.split('\`;// ' + 'data end')[1];
-  return sourceStart + data + sourceEnd;
-};
-
-/*
-Encode values and text into a spesific extendable format, which is later decodeable.
-
-The format is designed to work without limiting any characters from the input
-and without needing to handle escaping characters. This is done by saving lengths of
-text and each value. It can also handle skipping unknown sections.
-
-header:
-- start with header length, each section is separated by '&'
-- each section starts with the section name, and is followed by part lengths, separated by '|'
-
-body:
-- concatonates all data together without separations. Can be splitted according to the header part lengths.
-
-example:
-values: [key1, value1], [key2, value2] text: 'example_text'
-encoded: 22&values|4|6|4|6&text|13key1value1key2value2example_text
-
-NOTE: currently only encodes text, other data types can be added in the future
-*/
-const encode = (text) => {
-  let header = '';
-  let body = '';
-
-  // append text info to header and text to body
-  header += 'text';
-  header += `|${text.length}`;
-  body += `${text}`;
-
-  // prepend header with the header length
-  header = `${header.length}&${header}`;
-
-  // return encoded
-  return header + body;
-};
-
-/*
-Decode values and text from input. See explanation form 'encode'.
-*/
-const decode = (input) => {
-  let text = '';
-
-  // separate headersections form the body
-  const headerLen = Number(input.substring(0, input.indexOf('&')));
-  const headerSectionsArray = input.substring(input.indexOf('&') + 1, headerLen + String(headerLen).length + 1).split('&');
-  const body = input.substring(input.indexOf('&') + 1 + headerLen, input.length);
-
-  // parse each header section, read the parts from the body and do operations based on the name at the start
-  let bodyReadPos = 0;
-  for (const section of headerSectionsArray) {
-    const [name, ...lengths] = section.split('|');
-    const parts = lengths.map(len => {
-      const part = body.substring(bodyReadPos, bodyReadPos + Number(len));
-      bodyReadPos += Number(len);
-      return part;
-    });
-
-    switch (name) {
-      case 'text':
-        text += parts[0];
-        break;
-      default:
-        console.log(`Unknown header section: ${name}`);
-    };
-  }
-
-  return text;
-};
-
-if (!inBrowser()) { // executed in Node.js
-  /*
-   * Node.js specific code
-   */
-
-  const fs = require('fs');
-  const readline = require('readline');
-  const path = require('path');
-  const filename = path.basename(__filename);
-  const args = process.argv.slice(2);
-  const helpString = `classified.html version ${VERSION}
-Open in browser or with Node.js by running 'node ${filename}'
-
-
-Advanced usage: node ${filename} [COMMAND [TARGET [DATA...]]]
-
-COMMANDS:
-  Data modifying commands:
-    add         add DATA to TARGET
-    modify      modify current TARGETs data
-    replace     replace existing data with DATA on TARGET
-    delete      delete TARGET and its data
-    show        show TARGET's data on the terminal
-
-  Other commands:
-    new         download empty classified.html. Will ask for save location if not specified in TARGET
-    help        show this help message
-    exit        save and exit, same as the default when the command is left empty
-    discard     discard changes, clear concole and quit, same as pressing ctrl+c
-    password    change password. Will ask the new one if not spesified in in TARGET
-    debug       put 'debug' before COMMAND to disable clearing the console
-
-TARGETS:
-  text          all of the text
-  row ID        row of text. ID can be a number or a start of the line, for example 'row 5' or 'row the'
-
-Example usage:
-  add text This is classified.html    append 'This is classified.html' row to text
-  delete row 1                        delete the first row of text`;
-
-  // global variables to handle Node.js state
-  let password, rows;
-  let changes = false;
-  let waitingForCommand = false;
-  let readLineInterface;
-  let debugging = false;
-
-  // clear console if not debugging, seems to work on all major platforms: https://stackoverflow.com/a/32899667 should be tested more
-  const clearConsole = () => { if (!debugging) process.stdout.write('\x1Bc'); };
-
-  // put into debug mode if requested and remove the debug command from args
-  if (args.length > 0 && ['-d', '--debug', 'debug'].includes(args[0])) {
-    debugging = true;
-    args.shift();
-  }
-
-  // always clear the console on exit if exit has not been marked to be handled properly and not debugging
-  let exitHandled = false;
-  if (!debugging) {
-    process.on('exit', (code) => {
-      if (!exitHandled) {
-        clearConsole();
-        console.log('possible changes discarded');
-      }
-      process.exit(code);
-    });
-  }
-
-  /*
-  prompt from: https://github.com/ollipal/minimal-password-prompt
-  Allows reading user input so that it is hidden
-  */
-  const captureStdin = (onData) => {
-    process.stdin.setEncoding('utf-8');
-    process.stdin.setRawMode(true);
-    process.stdin.on('data', onData);
-    process.stdin.resume();
-  };
-
-  const releaseStdin = (onData) => {
-    process.stdin.pause();
-    process.stdin.removeListener('data', onData);
-    process.stdin.setRawMode(false);
-    process.stdout.write('\n');
-  };
-
-  const prompt = (question, ctrlcExits = true) => (
-    new Promise((resolve, reject) => {
-      let input = '';
-      const onData = (data) => {
-        switch (data) {
-          case '\u000A': // \n
-          case '\u000D': // \r
-          case '\u0004': // Ctrl+D
-            releaseStdin(onData);
-            resolve(input);
-            break;
-          case '\u0003': // Ctrl+C
-            releaseStdin(onData);
-            ctrlcExits // exit or raise error
-              ? process.exit()
-              : reject(new Error('Ctrl+C'));
-            break;
-          case '\u0008': // Backspace
-          case '\u007F': // Delete
-            input = input.slice(0, -1);
-            break;
-          default: // any other
-            input += data;
-        };
-      };
-      captureStdin(onData);
-      process.stdout.write(question);
-    })
-  );
-
-  // write to global readline, if resized when waiting for a command
-  process.stdout.on('resize', () => {
-    if (waitingForCommand) readLineInterface.write('resize\n');
-  });
-
-  /*
-  Ask for new command and parse the response to command, target and data.
-  Use a list of previous commands as hints.
-  */
-  const parseCommand = (input) => {
-    let [command, target, ...commandData] = input.split(' ');
-    commandData = commandData.join(' ');
-    if (command === '') command = undefined;
-    if (commandData === '') commandData = undefined;
-    if (commandData === "''" || commandData === '""') commandData = '';
-    return [command, target, commandData];
+    return subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: salt,
+        iterations: 100000,
+        hash: 'SHA-512'
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      true,
+      ['encrypt', 'decrypt']
+    );
   };
 
   /*
-  Download new empty classified.html to savePath. If savePath was not supplied, ask for it.
+  Derive a key from a password supplied by the user, and use the key
+  to encrypt the message.
+  Return a storable string that contains salt, initialization vector and the
+  encrypted data encoded with base64.
   */
-  const downloadNew = async (savePath) => {
-    if (savePath === undefined) {
-      const proposedDir = path.dirname(__filename) + path.sep;
-      let directory = await question(`save directory? [default: ${proposedDir}] `);
-      if (directory === '') directory = proposedDir;
-      if (!(directory.endsWith(path.sep))) directory += path.sep;
-      let name = await question('save name? ');
-      if (!(name.endsWith('.html'))) name += '.html';
-      savePath = directory + name;
-    }
+  const encrypt = async (password, message) => {
+    const salt = getRandomValues(new Uint8Array(16));
+    const iv = getRandomValues(new Uint8Array(12));
+    const key = await getKey(password, salt);
+
+    const encrypted = await subtle.encrypt(
+      {
+        name: 'AES-GCM',
+        iv
+      },
+      key,
+      utf8Encoder.encode(placeholderData + message)
+    );
+
+    return encryptionValuesToStrorableSring(salt, iv, encrypted);
+  };
+
+  /*
+  Derive a key from a password supplied by the user, and use the key
+  to decrypt the ciphertext.
+  If the ciphertext was decrypted successfully,
+  update the "decryptedValue" box with the decrypted value.
+  If there was an error decrypting,
+  update the "decryptedValue" box with an error message.
+  */
+  const decrypt = async (password, data) => {
+    const parsedData = encryptionValuesFromStroredSring(data);
+    const key = await getKey(password, parsedData.salt);
 
     try {
-      const source = fs.readFileSync(__filename, 'utf8');
-      fs.writeFileSync(savePath, updateSourceData(source, ''), { flag: 'wx' });
-      return `${savePath} saved`;
-    } catch (err) {
-      return `Could not save ${savePath}:\n${err}`;
+      const decrypted = await subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: parsedData.iv
+        },
+        key,
+        toByteArray(parsedData.data)
+      );
+
+      const dec = new TextDecoder('utf-8', { fatal: true });
+      const message = dec.decode(decrypted).slice(placeholderData.length);
+      return { data: message, success: true };
+    } catch (e) {
+      return { data: '', success: false };
     }
   };
 
   /*
-  Helper function to select a new password
+  Remove the old data from source and insert new
   */
-  const pickPassword = async () => {
-    let password, repassword;
-    while (true) {
-      password = await prompt('pick a password: ');
-      repassword = await prompt('re-enter password: ');
-      if (password === '') {
-        console.log('cannot be empty');
-        continue;
-      }
-      if (password === repassword) break;
-      console.log('passwords did not match, please try again:');
-    }
-    return password;
+  const updateSourceData = (source, data) => {
+    const sourceStart = source.split('const data' + ' = `')[0] + 'const data' + ' = `\n';
+    const sourceEnd = '\`;// ' + 'data end' + source.split('\`;// ' + 'data end')[1];
+    return sourceStart + data + sourceEnd;
   };
 
   /*
-  Ask user password until the data has been encrypted successfully.
-  Return both the data and the password.
+  Encode values and text into a spesific extendable format, which is later decodeable.
+
+  The format is designed to work without limiting any characters from the input
+  and without needing to handle escaping characters. This is done by saving lengths of
+  text and each value. It can also handle skipping unknown sections.
+
+  header:
+  - start with header length, each section is separated by '&'
+  - each section starts with the section name, and is followed by part lengths, separated by '|'
+
+  body:
+  - concatonates all data together without separations. Can be splitted according to the header part lengths.
+
+  example:
+  values: [key1, value1], [key2, value2] text: 'example_text'
+  encoded: 22&values|4|6|4|6&text|13key1value1key2value2example_text
+
+  NOTE: currently only encodes text, other data types can be added in the future
   */
-  const decryptExistingData = async () => {
-    let decryptionResult, password;
-    while (true) {
-      password = await prompt('enter password: ');
-      if (password === '') {
-        console.log('cannot be empty');
-        continue;
-      }
-      decryptionResult = await decrypt(password, data);
-      if (decryptionResult.success) break;
-      console.log('incorrect password');
-    }
-    return [password, await decode(decryptionResult.data)];
+  const encode = (text) => {
+    let header = '';
+    let body = '';
+
+    // append text info to header and text to body
+    header += 'text';
+    header += `|${text.length}`;
+    body += `${text}`;
+
+    // prepend header with the header length
+    header = `${header.length}&${header}`;
+
+    // return encoded
+    return header + body;
   };
 
   /*
-  Get or pick password and return existing decrypted data
+  Decode values and text from input. See explanation form 'encode'.
   */
-  const getPasswordAndData = async () => {
-    if (dataEmpty()) {
-      return [await pickPassword(), ''];
-    } else {
-      return await decryptExistingData();
+  const decode = (input) => {
+    let text = '';
+
+    // separate headersections form the body
+    const headerLen = Number(input.substring(0, input.indexOf('&')));
+    const headerSectionsArray = input.substring(input.indexOf('&') + 1, headerLen + String(headerLen).length + 1).split('&');
+    const body = input.substring(input.indexOf('&') + 1 + headerLen, input.length);
+
+    // parse each header section, read the parts from the body and do operations based on the name at the start
+    let bodyReadPos = 0;
+    for (const section of headerSectionsArray) {
+      const [name, ...lengths] = section.split('|');
+      const parts = lengths.map(len => {
+        const part = body.substring(bodyReadPos, bodyReadPos + Number(len));
+        bodyReadPos += Number(len);
+        return part;
+      });
+
+      switch (name) {
+        case 'text':
+          text += parts[0];
+          break;
+        default:
+          console.log(`Unknown header section: ${name}`);
+      };
     }
+
+    return text;
   };
 
-  /*
-  Ask question and wait for reply.
-  Allow using up/down arrows for prefilling options if given.
-  readLineInterface can be written outside, if terminal is resized when waiting for command.
-  */
-  const question = (question, previous = [], placeholder) => new Promise(resolve => {
-    readLineInterface = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
+  if (!inBrowser()) { // executed in Node.js
+    /*
+    * Node.js specific code
+    */
+
+    const fs = require('fs');
+    const readline = require('readline');
+    const path = require('path');
+    const filename = path.basename(__filename);
+    const args = process.argv.slice(2);
+    const helpString = `classified.html version ${VERSION}
+  Open in browser or with Node.js by running 'node ${filename}'
+
+
+  Advanced usage: node ${filename} [COMMAND [TARGET [DATA...]]]
+
+  COMMANDS:
+    Data modifying commands:
+      add         add DATA to TARGET
+      modify      modify current TARGETs data
+      replace     replace existing data with DATA on TARGET
+      delete      delete TARGET and its data
+      show        show TARGET's data on the terminal
+
+    Other commands:
+      new         download empty classified.html. Will ask for save location if not specified in TARGET
+      help        show this help message
+      exit        save and exit, same as the default when the command is left empty
+      discard     discard changes, clear concole and quit, same as pressing ctrl+c
+      password    change password. Will ask the new one if not spesified in in TARGET
+      debug       put 'debug' before COMMAND to disable clearing the console
+
+  TARGETS:
+    text          all of the text
+    row ID        row of text. ID can be a number or a start of the line, for example 'row 5' or 'row the'
+
+  Example usage:
+    add text This is classified.html    append 'This is classified.html' row to text
+    delete row 1                        delete the first row of text`;
+
+    // global variables to handle Node.js state
+    let password, rows;
+    let changes = false;
+    let waitingForCommand = false;
+    let readLineInterface;
+    let debugging = false;
+
+    // clear console if not debugging, seems to work on all major platforms: https://stackoverflow.com/a/32899667 should be tested more
+    const clearConsole = () => { if (!debugging) process.stdout.write('\x1Bc'); };
+
+    // put into debug mode if requested and remove the debug command from args
+    if (args.length > 0 && ['-d', '--debug', 'debug'].includes(args[0])) {
+      debugging = true;
+      args.shift();
+    }
+
+    // always clear the console on exit if exit has not been marked to be handled properly and not debugging
+    let exitHandled = false;
+    if (!debugging) {
+      process.on('exit', (code) => {
+        if (!exitHandled) {
+          clearConsole();
+          console.log('possible changes discarded');
+        }
+        process.exit(code);
+      });
+    }
+
+    /*
+    prompt from: https://github.com/ollipal/minimal-password-prompt
+    Allows reading user input so that it is hidden
+    */
+    const captureStdin = (onData) => {
+      process.stdin.setEncoding('utf-8');
+      process.stdin.setRawMode(true);
+      process.stdin.on('data', onData);
+      process.stdin.resume();
+    };
+
+    const releaseStdin = (onData) => {
+      process.stdin.pause();
+      process.stdin.removeListener('data', onData);
+      process.stdin.setRawMode(false);
+      process.stdout.write('\n');
+    };
+
+    const prompt = (question, ctrlcExits = true) => (
+      new Promise((resolve, reject) => {
+        let input = '';
+        const onData = (data) => {
+          switch (data) {
+            case '\u000A': // \n
+            case '\u000D': // \r
+            case '\u0004': // Ctrl+D
+              releaseStdin(onData);
+              resolve(input);
+              break;
+            case '\u0003': // Ctrl+C
+              releaseStdin(onData);
+              ctrlcExits // exit or raise error
+                ? process.exit()
+                : reject(new Error('Ctrl+C'));
+              break;
+            case '\u0008': // Backspace
+            case '\u007F': // Delete
+              input = input.slice(0, -1);
+              break;
+            default: // any other
+              input += data;
+          };
+        };
+        captureStdin(onData);
+        process.stdout.write(question);
+      })
+    );
+
+    // write to global readline, if resized when waiting for a command
+    process.stdout.on('resize', () => {
+      if (waitingForCommand) readLineInterface.write('resize\n');
     });
 
-    const maxPreviousIndex = previous.length - 1;
-    let previousIndex = -1;
-    const clearLine = () => readLineInterface.write(null, { ctrl: true, name: 'u' });
-    const reactUpDown = (input) => {
-      if (input === '\u001b[A') { // arrow up
-        if (previousIndex < maxPreviousIndex) {
-          previousIndex++;
-          clearLine();
-          readLineInterface.write(previous[previousIndex]);
-        }
-      } else if (input === '\u001b[B') { // down arrow
-        if (previousIndex > -1) {
-          previousIndex--;
-          clearLine();
-          readLineInterface.write(previous[previousIndex]);
-        } else {
-          clearLine();
-        }
+    /*
+    Ask for new command and parse the response to command, target and data.
+    Use a list of previous commands as hints.
+    */
+    const parseCommand = (input) => {
+      let [command, target, ...commandData] = input.split(' ');
+      commandData = commandData.join(' ');
+      if (command === '') command = undefined;
+      if (commandData === '') commandData = undefined;
+      if (commandData === "''" || commandData === '""') commandData = '';
+      return [command, target, commandData];
+    };
+
+    /*
+    Download new empty classified.html to savePath. If savePath was not supplied, ask for it.
+    */
+    const downloadNew = async (savePath) => {
+      if (savePath === undefined) {
+        const proposedDir = path.dirname(__filename) + path.sep;
+        let directory = await question(`save directory? [default: ${proposedDir}] `);
+        if (directory === '') directory = proposedDir;
+        if (!(directory.endsWith(path.sep))) directory += path.sep;
+        let name = await question('save name? ');
+        if (!(name.endsWith('.html'))) name += '.html';
+        savePath = directory + name;
+      }
+
+      try {
+        const source = fs.readFileSync(__filename, 'utf8');
+        fs.writeFileSync(savePath, updateSourceData(source, ''), { flag: 'wx' });
+        return `${savePath} saved`;
+      } catch (err) {
+        return `Could not save ${savePath}:\n${err}`;
       }
     };
 
-    process.stdin.on('data', reactUpDown);
-    readLineInterface.question(question, (reply) => {
-      process.stdin.removeListener('data', reactUpDown);
-      readLineInterface.close();
-      resolve(reply);
-    });
-    if (placeholder) readLineInterface.write(placeholder);
-  });
-
-  /*
-  Save changes if a new file or changes
-  Saving is done by writing data to a temporary file, and renaming it to the actual one.
-  */
-  const saveChanges = async (password, text) => {
-    if (dataEmpty() || changes) {
-      // generate source
-      const source = fs.readFileSync(__filename, 'utf8');
-      const updatedData = await encrypt(password, await encode(text));
-      const updatedSource = updateSourceData(source, updatedData);
-
-      let triesLeft = 10;
+    /*
+    Helper function to select a new password
+    */
+    const pickPassword = async () => {
+      let password, repassword;
       while (true) {
-        // get temporary path to a file that does not yet exist
-        const tempPath = `${__filename}_temp-${require('crypto').randomBytes(10).toString('hex')}`;
-        if (fs.existsSync(tempPath)) {
-          if (triesLeft === 0) {
-            console.log(`could not save ${__filename}: could not generate temp path`);
-            break;
-          }
-          triesLeft--;
+        password = await prompt('pick a password: ');
+        repassword = await prompt('re-enter password: ');
+        if (password === '') {
+          console.log('cannot be empty');
           continue;
         }
-
-        // copy file to temp file, and rename
-        try {
-          fs.writeFileSync(tempPath, updatedSource, { flag: 'wx' });
-          fs.renameSync(tempPath, __filename);
-          console.log('changes saved!');
-          break;
-        } catch (err) {
-          if (triesLeft === 0) {
-            console.log(`could not save ${__filename}:\n${err}`);
-            break;
-          }
-          triesLeft--;
-        };
+        if (password === repassword) break;
+        console.log('passwords did not match, please try again:');
       }
-    } else {
-      console.log('no changes to save');
-    }
-  };
-  /*
-  Command handling helpers:
-  */
+      return password;
+    };
 
-  const minRowLen = 58; // note, can be shorter if the terminal is shorter
-
-  // append input with a cyan row number and space, normal text to black and background to white
-  const row = (str, len, num) => {
-    numStr = String(num).padEnd(2);
-    if (str.length < len - numStr.length) {
-      return `\x1b[36m\x1b[47m${numStr}\x1b[30m\x1b[47m${str.padEnd(len - numStr.length)}\x1b[0m`;
-    } else {
-      const fillerSpaces = ' '.repeat(process.stdout.columns - (numStr + str).length % process.stdout.columns);
-      return `\x1b[36m\x1b[47m${numStr}\x1b[30m\x1b[47m${str}${fillerSpaces}\x1b[0m`;
-    }
-  };
-
-  const getPrintWidth = () => {
-    let longestRowLen = 0;
-    if (rows.length !== 0) {
-      longestRowLen = rows.reduce((a, b) => a.length > b.length ? a : b).length + 3; // 3 because padding start and end
-    }
-
-    return Math.min(Math.max(longestRowLen, minRowLen), process.stdout.columns);
-  };
-
-  const printContents = () => {
-    clearConsole();
-    if (rows.length !== 0) {
-      const printWidth = getPrintWidth();
-      let textContents = '';
-      for (let rowNum = 0; rowNum < rows.length; rowNum++) {
-        textContents += row(rows[rowNum], printWidth, rowNum + 1) + '\n';
-      }
-      console.log(textContents.slice(0, -1));
-    }
-  };
-
-  const onlyDigits = rowString => [...rowString].every(c => '0123456789'.includes(c));
-
-  const parseRow = (commandData, multipleRowsAllowed = false) => {
-    const rowString = commandData.split(' ')[0];
-    let errorString;
-    if (onlyDigits(rowString)) {
-      const rowNumber = parseInt(rowString);
-      if (isNaN(rowNumber) || rowNumber <= 0) errorString = `not a proper row: ${rowString}`;
-      return [[rowNumber], errorString];
-    } else {
-      const rowNumbers = [];
-      for (const [i, row] of rows.entries()) {
-        if (row.startsWith(rowString)) rowNumbers.push(i + 1);
-      }
-      if (rowNumbers.length === 0) errorString = `no row matches: ${rowString}`;
-      if (!multipleRowsAllowed && rowNumbers.length > 1) errorString = `multiple row matches: ${rowNumbers.length}`;
-      return [rowNumbers, errorString];
-    }
-  };
-
-  const parseRowCommand = (commandData, multipleRowsAllowed = false) => {
-    let [rowNumbers, errorString] = parseRow(commandData, multipleRowsAllowed);
-    const command = commandData.split(' ').slice(1).join(' ');
-    if (command === '') errorString = 'command data missing';
-    return [rowNumbers, command, errorString];
-  };
-
-  const addText = (commandData) => {
-    changes = true;
-    rows.push(commandData);
-    return 'new row added';
-  };
-
-  const addRow = (commandData) => {
-    const [rowNumbers, command, errorString] = parseRowCommand(commandData);
-    if (errorString !== undefined) return errorString;
-    const rowNumber = rowNumbers[0];
-    if (rowNumber > rows.length + 1) return `row index too high: ${rowNumber}, use 'add row ${rows.length + 1}' or 'add text' to add row to the end`;
-    rows.splice(rowNumber - 1, 0, command);
-    return 'new row added';
-  };
-
-  const modifyRow = async (commandData) => {
-    const [rowNumbers, errorString] = parseRow(commandData);
-    if (errorString !== undefined) return errorString;
-    const rowNumber = rowNumbers[0];
-    if (rowNumber > rows.length) return `row index too high: ${rowNumber}`;
-    clearConsole();
-    rows[rowNumber - 1] = await question('', [], rows[rowNumber - 1]);
-    return `row ${rowNumber} modified`;
-  };
-
-  const deleteText = () => {
-    rows = [];
-    return 'text deleted';
-  };
-
-  const deleteRow = (commandData) => {
-    const [rowNumbers, errorString] = parseRow(commandData);
-    if (errorString !== undefined) return errorString;
-    const rowNumber = rowNumbers[0];
-    if (rowNumber > rows.length) return `row index too high: ${rowNumber}`;
-    rows.splice(rowNumber - 1, 1);
-    return `row ${rowNumber} deleted`;
-  };
-
-  const replaceText = (commandData) => {
-    rows = [commandData];
-    return 'text replaced';
-  };
-
-  const replaceRow = (commandData) => {
-    const [rowNumbers, command, errorString] = parseRowCommand(commandData);
-    if (errorString !== undefined) return errorString;
-    const rowNumber = rowNumbers[0];
-    if (rowNumber < rows.length + 1) {
-      rows[rowNumber - 1] = command;
-      return `row ${rowNumber} replaced`;
-    } else {
-      return `could not replace row ${rowNumber}`;
-    }
-  };
-
-  const showText = () => rows.join('\n');
-
-  const showRow = (commandData) => {
-    const [rowNumbers, errorString] = parseRow(commandData, true);
-    if (errorString !== undefined) return errorString;
-    let result = '';
-    for (const rowNumber of rowNumbers) {
-      if (rowNumber > rows.length) return `row index too high: ${row}`;
-      result += rows[rowNumber - 1] + '\n';
-    }
-    return result.slice(0, -1); // remove extra newline
-  };
-
-  const changePassword = async () => {
-    clearConsole();
-    console.log('changing password:');
-    password = await pickPassword();
-    changes = true;
-    return 'password changed successfully';
-  };
-
-  /*
-  Handle user command. Returns a boolean which tells was the command handled properly
-  and a message that should be logged.
-  */
-  const handleCommand = async (command, target, commandData) => {
-    let unknownCommand = false;
-    let handleMessage;
-    if (command === 'exit' || command === undefined) {
-      clearConsole();
-      await saveChanges(password, rows.join('\n'));
-      exitHandled = true;
-      process.exit();
-    } else if (command === 'discard') {
-      process.exit(); // this will trigger on exit with exitHandled = false
-    } else if (command === 'new') {
-      handleMessage = await downloadNew(target);
-    } else if (command === 'help') {
-      handleMessage = helpString + '\n';
-    } else if (command === 'add' && target === 'text' && commandData !== undefined) {
-      handleMessage = addText(commandData);
-    } else if (command === 'add' && target === 'row' && commandData !== undefined) {
-      handleMessage = addRow(commandData);
-    } else if (command === 'modify' && target === 'row' && commandData !== undefined) {
-      handleMessage = await modifyRow(commandData);
-    } else if (command === 'modify' && target === 'text') {
-      handleMessage = 'currently modify works only on rows';
-    } else if (command === 'delete' && target === 'text' && commandData === undefined) {
-      handleMessage = deleteText();
-    } else if (command === 'delete' && target === 'row' && commandData !== undefined) {
-      handleMessage = deleteRow(commandData);
-    } else if (command === 'delete' && target === 'row' && commandData === undefined) {
-      handleMessage = 'row number to delete missing';
-    } else if (command === 'show' && target === 'text' && commandData === undefined) {
-      handleMessage = showText();
-    } else if (command === 'show' && target === 'row' && commandData !== undefined) {
-      handleMessage = showRow(commandData);
-    } else if (command === 'replace' && target === 'text' && commandData !== undefined) {
-      handleMessage = replaceText(commandData);
-    } else if (command === 'replace' && target === 'text' && commandData === undefined) {
-      handleMessage = 'replace data missing';
-    } else if (command === 'replace' && target === 'row' && commandData !== undefined) {
-      handleMessage = replaceRow(commandData);
-    } else if (command === 'password') {
-      handleMessage = await changePassword();
-    } else {
-      unknownCommand = true;
-      handleMessage = `command did not work: COMMAND: ${command}, TARGET: ${target}, DATA: ${commandData}`;
-    }
-    return [!unknownCommand, handleMessage];
-  };
-
-  (async () => {
-    // parse commands passed through args
-    const [command, target, commandData] = parseCommand(args.join(' '));
-
-    // handle the cases whitch do not require password
-    if (['-h', '--help', 'help'].includes(command)) {
-      console.log(helpString);
-      exitHandled = true;
-      process.exit();
-    }
-    if (['-n', '--new', 'new'].includes(command)) {
-      console.log(await downloadNew(target));
-      exitHandled = true;
-      process.exit();
-    }
-
-    // select password, or decrypt data with the existing one
-    let decryptedData;
-    [password, decryptedData] = await getPasswordAndData();
-    // initialize rows
-    rows = decryptedData === '' ? [] : decryptedData.split('\n');
-
-    // handle any other command that required password except the default (exit)
-    if (command !== undefined) {
-      const [handled, message] = await handleCommand(command, target, commandData);
-      clearConsole();
-      if (handled) {
-        if (message) console.log(message + '\n');
-        if (command === 'show') {
-          await question('(press enter to exit)');
-          clearConsole();
+    /*
+    Ask user password until the data has been encrypted successfully.
+    Return both the data and the password.
+    */
+    const decryptExistingData = async () => {
+      let decryptionResult, password;
+      while (true) {
+        password = await prompt('enter password: ');
+        if (password === '') {
+          console.log('cannot be empty');
+          continue;
         }
-        await saveChanges(password, rows.join('\n'));
+        decryptionResult = await decrypt(password, data);
+        if (decryptionResult.success) break;
+        console.log('incorrect password');
+      }
+      return [password, await decode(decryptionResult.data)];
+    };
+
+    /*
+    Get or pick password and return existing decrypted data
+    */
+    const getPasswordAndData = async () => {
+      if (dataEmpty()) {
+        return [await pickPassword(), ''];
       } else {
-        console.log('error: could not handle command');
+        return await decryptExistingData();
       }
-      exitHandled = true;
-      process.exit();
-    }
+    };
 
-    let hints = ['add text ', 'exit', 'discard', 'help', 'delete row ', 'replace row ', 'add row ', 'show row ', 'modify row '];
-    let handled, message;
-    while (true) {
-      printContents();
-      if (message) console.log(message + '\n');
-      waitingForCommand = true;
-      const reply = await question("type 'help', enter a command or leave empty to save and exit: ", hints);
-      waitingForCommand = false;
-      if (reply === 'resize') continue;
+    /*
+    Ask question and wait for reply.
+    Allow using up/down arrows for prefilling options if given.
+    readLineInterface can be written outside, if terminal is resized when waiting for command.
+    */
+    const question = (question, previous = [], placeholder) => new Promise(resolve => {
+      readLineInterface = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
 
-      const [command, target, commandData] = await parseCommand(reply);
-      [handled, message] = await handleCommand(command, target, commandData); // this can exit the program
+      const maxPreviousIndex = previous.length - 1;
+      let previousIndex = -1;
+      const clearLine = () => readLineInterface.write(null, { ctrl: true, name: 'u' });
+      const reactUpDown = (input) => {
+        if (input === '\u001b[A') { // arrow up
+          if (previousIndex < maxPreviousIndex) {
+            previousIndex++;
+            clearLine();
+            readLineInterface.write(previous[previousIndex]);
+          }
+        } else if (input === '\u001b[B') { // down arrow
+          if (previousIndex > -1) {
+            previousIndex--;
+            clearLine();
+            readLineInterface.write(previous[previousIndex]);
+          } else {
+            clearLine();
+          }
+        }
+      };
 
-      // prepend list of hints if command was handled, and is different to the first one
-      if (handled) {
-        const newHint = `${command} ${target ? target + ' ' : ''}`;
-        if (newHint !== hints[0]) hints = [newHint, ...hints];
+      process.stdin.on('data', reactUpDown);
+      readLineInterface.question(question, (reply) => {
+        process.stdin.removeListener('data', reactUpDown);
+        readLineInterface.close();
+        resolve(reply);
+      });
+      if (placeholder) readLineInterface.write(placeholder);
+    });
+
+    /*
+    Save changes if a new file or changes
+    Saving is done by writing data to a temporary file, and renaming it to the actual one.
+    */
+    const saveChanges = async (password, text) => {
+      if (dataEmpty() || changes) {
+        // generate source
+        const source = fs.readFileSync(__filename, 'utf8');
+        const updatedData = await encrypt(password, await encode(text));
+        const updatedSource = updateSourceData(source, updatedData);
+
+        let triesLeft = 10;
+        while (true) {
+          // get temporary path to a file that does not yet exist
+          const tempPath = `${__filename}_temp-${require('crypto').randomBytes(10).toString('hex')}`;
+          if (fs.existsSync(tempPath)) {
+            if (triesLeft === 0) {
+              console.log(`could not save ${__filename}: could not generate temp path`);
+              break;
+            }
+            triesLeft--;
+            continue;
+          }
+
+          // copy file to temp file, and rename
+          try {
+            fs.writeFileSync(tempPath, updatedSource, { flag: 'wx' });
+            fs.renameSync(tempPath, __filename);
+            console.log('changes saved!');
+            break;
+          } catch (err) {
+            if (triesLeft === 0) {
+              console.log(`could not save ${__filename}:\n${err}`);
+              break;
+            }
+            triesLeft--;
+          };
+        }
+      } else {
+        console.log('no changes to save');
       }
-    }
-  })();
-} else { // executed in Browser
-  /*
-   * Browser specific code
-   */
+    };
+    /*
+    Command handling helpers:
+    */
 
-  /*
-All of the svg logos used in this project are taken from Googles material-design-icons project.
+    const minRowLen = 58; // note, can be shorter if the terminal is shorter
+
+    // append input with a cyan row number and space, normal text to black and background to white
+    const row = (str, len, num) => {
+      numStr = String(num).padEnd(2);
+      if (str.length < len - numStr.length) {
+        return `\x1b[36m\x1b[47m${numStr}\x1b[30m\x1b[47m${str.padEnd(len - numStr.length)}\x1b[0m`;
+      } else {
+        const fillerSpaces = ' '.repeat(process.stdout.columns - (numStr + str).length % process.stdout.columns);
+        return `\x1b[36m\x1b[47m${numStr}\x1b[30m\x1b[47m${str}${fillerSpaces}\x1b[0m`;
+      }
+    };
+
+    const getPrintWidth = () => {
+      let longestRowLen = 0;
+      if (rows.length !== 0) {
+        longestRowLen = rows.reduce((a, b) => a.length > b.length ? a : b).length + 3; // 3 because padding start and end
+      }
+
+      return Math.min(Math.max(longestRowLen, minRowLen), process.stdout.columns);
+    };
+
+    const printContents = () => {
+      clearConsole();
+      if (rows.length !== 0) {
+        const printWidth = getPrintWidth();
+        let textContents = '';
+        for (let rowNum = 0; rowNum < rows.length; rowNum++) {
+          textContents += row(rows[rowNum], printWidth, rowNum + 1) + '\n';
+        }
+        console.log(textContents.slice(0, -1));
+      }
+    };
+
+    const onlyDigits = rowString => [...rowString].every(c => '0123456789'.includes(c));
+
+    const parseRow = (commandData, multipleRowsAllowed = false) => {
+      const rowString = commandData.split(' ')[0];
+      let errorString;
+      if (onlyDigits(rowString)) {
+        const rowNumber = parseInt(rowString);
+        if (isNaN(rowNumber) || rowNumber <= 0) errorString = `not a proper row: ${rowString}`;
+        return [[rowNumber], errorString];
+      } else {
+        const rowNumbers = [];
+        for (const [i, row] of rows.entries()) {
+          if (row.startsWith(rowString)) rowNumbers.push(i + 1);
+        }
+        if (rowNumbers.length === 0) errorString = `no row matches: ${rowString}`;
+        if (!multipleRowsAllowed && rowNumbers.length > 1) errorString = `multiple row matches: ${rowNumbers.length}`;
+        return [rowNumbers, errorString];
+      }
+    };
+
+    const parseRowCommand = (commandData, multipleRowsAllowed = false) => {
+      let [rowNumbers, errorString] = parseRow(commandData, multipleRowsAllowed);
+      const command = commandData.split(' ').slice(1).join(' ');
+      if (command === '') errorString = 'command data missing';
+      return [rowNumbers, command, errorString];
+    };
+
+    const addText = (commandData) => {
+      changes = true;
+      rows.push(commandData);
+      return 'new row added';
+    };
+
+    const addRow = (commandData) => {
+      const [rowNumbers, command, errorString] = parseRowCommand(commandData);
+      if (errorString !== undefined) return errorString;
+      const rowNumber = rowNumbers[0];
+      if (rowNumber > rows.length + 1) return `row index too high: ${rowNumber}, use 'add row ${rows.length + 1}' or 'add text' to add row to the end`;
+      rows.splice(rowNumber - 1, 0, command);
+      return 'new row added';
+    };
+
+    const modifyRow = async (commandData) => {
+      const [rowNumbers, errorString] = parseRow(commandData);
+      if (errorString !== undefined) return errorString;
+      const rowNumber = rowNumbers[0];
+      if (rowNumber > rows.length) return `row index too high: ${rowNumber}`;
+      clearConsole();
+      rows[rowNumber - 1] = await question('', [], rows[rowNumber - 1]);
+      return `row ${rowNumber} modified`;
+    };
+
+    const deleteText = () => {
+      rows = [];
+      return 'text deleted';
+    };
+
+    const deleteRow = (commandData) => {
+      const [rowNumbers, errorString] = parseRow(commandData);
+      if (errorString !== undefined) return errorString;
+      const rowNumber = rowNumbers[0];
+      if (rowNumber > rows.length) return `row index too high: ${rowNumber}`;
+      rows.splice(rowNumber - 1, 1);
+      return `row ${rowNumber} deleted`;
+    };
+
+    const replaceText = (commandData) => {
+      rows = [commandData];
+      return 'text replaced';
+    };
+
+    const replaceRow = (commandData) => {
+      const [rowNumbers, command, errorString] = parseRowCommand(commandData);
+      if (errorString !== undefined) return errorString;
+      const rowNumber = rowNumbers[0];
+      if (rowNumber < rows.length + 1) {
+        rows[rowNumber - 1] = command;
+        return `row ${rowNumber} replaced`;
+      } else {
+        return `could not replace row ${rowNumber}`;
+      }
+    };
+
+    const showText = () => rows.join('\n');
+
+    const showRow = (commandData) => {
+      const [rowNumbers, errorString] = parseRow(commandData, true);
+      if (errorString !== undefined) return errorString;
+      let result = '';
+      for (const rowNumber of rowNumbers) {
+        if (rowNumber > rows.length) return `row index too high: ${row}`;
+        result += rows[rowNumber - 1] + '\n';
+      }
+      return result.slice(0, -1); // remove extra newline
+    };
+
+    const changePassword = async () => {
+      clearConsole();
+      console.log('changing password:');
+      password = await pickPassword();
+      changes = true;
+      return 'password changed successfully';
+    };
+
+    /*
+    Handle user command. Returns a boolean which tells was the command handled properly
+    and a message that should be logged.
+    */
+    const handleCommand = async (command, target, commandData) => {
+      let unknownCommand = false;
+      let handleMessage;
+      if (command === 'exit' || command === undefined) {
+        clearConsole();
+        await saveChanges(password, rows.join('\n'));
+        exitHandled = true;
+        process.exit();
+      } else if (command === 'discard') {
+        process.exit(); // this will trigger on exit with exitHandled = false
+      } else if (command === 'new') {
+        handleMessage = await downloadNew(target);
+      } else if (command === 'help') {
+        handleMessage = helpString + '\n';
+      } else if (command === 'add' && target === 'text' && commandData !== undefined) {
+        handleMessage = addText(commandData);
+      } else if (command === 'add' && target === 'row' && commandData !== undefined) {
+        handleMessage = addRow(commandData);
+      } else if (command === 'modify' && target === 'row' && commandData !== undefined) {
+        handleMessage = await modifyRow(commandData);
+      } else if (command === 'modify' && target === 'text') {
+        handleMessage = 'currently modify works only on rows';
+      } else if (command === 'delete' && target === 'text' && commandData === undefined) {
+        handleMessage = deleteText();
+      } else if (command === 'delete' && target === 'row' && commandData !== undefined) {
+        handleMessage = deleteRow(commandData);
+      } else if (command === 'delete' && target === 'row' && commandData === undefined) {
+        handleMessage = 'row number to delete missing';
+      } else if (command === 'show' && target === 'text' && commandData === undefined) {
+        handleMessage = showText();
+      } else if (command === 'show' && target === 'row' && commandData !== undefined) {
+        handleMessage = showRow(commandData);
+      } else if (command === 'replace' && target === 'text' && commandData !== undefined) {
+        handleMessage = replaceText(commandData);
+      } else if (command === 'replace' && target === 'text' && commandData === undefined) {
+        handleMessage = 'replace data missing';
+      } else if (command === 'replace' && target === 'row' && commandData !== undefined) {
+        handleMessage = replaceRow(commandData);
+      } else if (command === 'password') {
+        handleMessage = await changePassword();
+      } else {
+        unknownCommand = true;
+        handleMessage = `command did not work: COMMAND: ${command}, TARGET: ${target}, DATA: ${commandData}`;
+      }
+      return [!unknownCommand, handleMessage];
+    };
+
+    (async () => {
+      // parse commands passed through args
+      const [command, target, commandData] = parseCommand(args.join(' '));
+
+      // handle the cases whitch do not require password
+      if (['-h', '--help', 'help'].includes(command)) {
+        console.log(helpString);
+        exitHandled = true;
+        process.exit();
+      }
+      if (['-n', '--new', 'new'].includes(command)) {
+        console.log(await downloadNew(target));
+        exitHandled = true;
+        process.exit();
+      }
+
+      // select password, or decrypt data with the existing one
+      let decryptedData;
+      [password, decryptedData] = await getPasswordAndData();
+      // initialize rows
+      rows = decryptedData === '' ? [] : decryptedData.split('\n');
+
+      // handle any other command that required password except the default (exit)
+      if (command !== undefined) {
+        const [handled, message] = await handleCommand(command, target, commandData);
+        clearConsole();
+        if (handled) {
+          if (message) console.log(message + '\n');
+          if (command === 'show') {
+            await question('(press enter to exit)');
+            clearConsole();
+          }
+          await saveChanges(password, rows.join('\n'));
+        } else {
+          console.log('error: could not handle command');
+        }
+        exitHandled = true;
+        process.exit();
+      }
+
+      let hints = ['add text ', 'exit', 'discard', 'help', 'delete row ', 'replace row ', 'add row ', 'show row ', 'modify row '];
+      let handled, message;
+      while (true) {
+        printContents();
+        if (message) console.log(message + '\n');
+        waitingForCommand = true;
+        const reply = await question("type 'help', enter a command or leave empty to save and exit: ", hints);
+        waitingForCommand = false;
+        if (reply === 'resize') continue;
+
+        const [command, target, commandData] = await parseCommand(reply);
+        [handled, message] = await handleCommand(command, target, commandData); // this can exit the program
+
+        // prepend list of hints if command was handled, and is different to the first one
+        if (handled) {
+          const newHint = `${command} ${target ? target + ' ' : ''}`;
+          if (newHint !== hints[0]) hints = [newHint, ...hints];
+        }
+      }
+    })();
+  } else { // executed in Browser
+    /*
+    * Browser specific code
+    */
+
+    /*
+  All of the svg logos used in this project are taken from Googles material-design-icons project.
 This licence file is also available at https://github.com/google/material-design-icons/blob/master/LICENSE
 
 
@@ -1174,20 +1175,19 @@ This licence file is also available at https://github.com/google/material-design
       of your accepting any such warranty or additional liability.
 
    END OF TERMS AND CONDITIONS
-  */
+    */
+    const htmlTop = "//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body><script>";
+    const htmlBottom = '<\/script></body></html>';
+    let filename = location.href.split('/').slice(-1)[0];
+    // %2F means forward slash on mobile chrome for local files
+    if (navigator.canShare) {
+      filename = filename.split('%2F').slice(-1)[0];
+    }
+    const source = htmlTop + document.currentScript.innerHTML + htmlBottom;
 
-  const htmlTop = "//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body><script>";
-  const htmlBottom = '<\/script></body></html>';
-  let filename = location.href.split('/').slice(-1)[0];
-  // %2F means forward slash on mobile chrome for local files
-  if (navigator.canShare) {
-    filename = filename.split('%2F').slice(-1)[0];
-  }
-  const source = htmlTop + document.currentScript.innerHTML + htmlBottom;
-
-  window.addEventListener('DOMContentLoaded', () => {
-    // set document html
-    document.getElementsByTagName('body')[0].innerHTML = `
+    window.addEventListener('DOMContentLoaded', () => {
+      // set document html
+      document.getElementsByTagName('body')[0].innerHTML = `
 <div id="form-div">
   <h2>classified.html</h2>
   <form id="form">
@@ -1224,10 +1224,10 @@ This licence file is also available at https://github.com/google/material-design
 <div class="save-container">
   <button id="save">save changes</button>
 </div>
-    `;
-    // set document css
-    const style = document.createElement('style');
-    style.textContent = `
+      `;
+      // set document css
+      const style = document.createElement('style');
+      style.textContent = `
 :root {
   /*State*/
   --display-form: inline-block;
@@ -1627,195 +1627,199 @@ h2 {
 #navbar:hover .hide-when-not-main {
   display: var(--display-main);
 }
-`;
-    document.head.append(style);
-    document.title = filename;
+      `;
+      document.head.append(style);
+      document.title = filename;
 
-    const form = document.getElementById('form');
-    const formSubmit = document.getElementById('form-submit');
-    const dataInput = document.getElementById('text');
-    const saveButton = document.getElementById('save');
-    const changePasswordButton = document.getElementById('change');
-    const emptyButton = document.getElementById('empty');
-    let currentPassword; // this can change if the user changes password
+      const form = document.getElementById('form');
+      const formSubmit = document.getElementById('form-submit');
+      const dataInput = document.getElementById('text');
+      const saveButton = document.getElementById('save');
+      const changePasswordButton = document.getElementById('change');
+      const emptyButton = document.getElementById('empty');
+      let currentPassword; // this can change if the user changes password
 
-    const setProperty = (key, value) => document.documentElement.style.setProperty(key, value);
+      const setProperty = (key, value) => document.documentElement.style.setProperty(key, value);
 
-    const preventUnload = (e) => {
-      e.preventDefault(); // this enables the unload warning message
-      e.returnValue = ''; // Chrome requires returnValue to be set
-    };
+      const preventUnload = (e) => {
+        e.preventDefault(); // this enables the unload warning message
+        e.returnValue = ''; // Chrome requires returnValue to be set
+      };
 
-    const activateSaveButton = _ => {
-      setProperty('--display-save', 'inline');
-      window.addEventListener('beforeunload', preventUnload); // activate reminder about unsaved content
-    };
+      const activateSaveButton = _ => {
+        setProperty('--display-save', 'inline');
+        window.addEventListener('beforeunload', preventUnload); // activate reminder about unsaved content
+      };
 
-    /*
-     This handles automatically resizing textarea
-     */
-    const resize = () => {
-      dataInput.style.height = 'auto';
-      dataInput.style.height = dataInput.scrollHeight - 2 * parseInt(getComputedStyle(dataInput).paddingTop) + 'px';
-    };
+      /*
+      This handles automatically resizing textarea
+      */
+      const resize = () => {
+        dataInput.style.height = 'auto';
+        dataInput.style.height = dataInput.scrollHeight - 2 * parseInt(getComputedStyle(dataInput).paddingTop) + 'px';
+      };
 
-    dataInput.addEventListener('input', resize);
-    window.addEventListener('resize', resize);
-    resize();
+      dataInput.addEventListener('input', resize);
+      window.addEventListener('resize', resize);
+      resize();
 
-    const downloadFile = (file) => {
-      const tmpButton = document.createElement('a');
-      tmpButton.href = URL.createObjectURL(file);
-      tmpButton.download = filename;
-      tmpButton.click();
-      tmpButton.remove();
-    };
+      const downloadFile = (file) => {
+        const tmpButton = document.createElement('a');
+        tmpButton.href = URL.createObjectURL(file);
+        tmpButton.download = filename;
+        tmpButton.click();
+        tmpButton.remove();
+      };
 
-    const shareFile = async (file) => {
-      try {
-        await navigator.share({ files: [file], title: filename });
-      } catch (error) {
-        if (confirm(`Sharing failed: "${error.message}".\nDownload intead?`)) downloadFile(file);
-      }
-    };
+      const shareFile = async (file) => {
+        try {
+          await navigator.share({ files: [file], title: filename });
+        } catch (error) {
+          if (confirm(`Sharing failed: "${error.message}".\nDownload intead?`)) downloadFile(file);
+        }
+      };
 
-    /*
-    Download or share the file depending on the device used
-    */
-    const obtainFile = async (data, name) => {
-      const fileContent = updateSourceData(source, data);
-      const file = new File([fileContent], name, { type: 'text/html' });
+      /*
+      Download or share the file depending on the device used
+      */
+      const obtainFile = async (data, name) => {
+        const fileContent = updateSourceData(source, data);
+        const file = new File([fileContent], name, { type: 'text/html' });
 
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await shareFile(file);
-      } else {
-        downloadFile(file);
-      }
-    };
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await shareFile(file);
+        } else {
+          downloadFile(file);
+        }
+      };
 
-    const getPasswordValue = () => {
-      const password = form.password.value;
-      const repassword = form.repassword.value;
-      if (password === '') {
-        alert('password cannot be empty');
-        return undefined;
-      } else if (password !== repassword) {
-        alert('passwords did not match, please try again');
+      const getPasswordValue = () => {
+        const password = form.password.value;
+        const repassword = form.repassword.value;
+        if (password === '') {
+          alert('password cannot be empty');
+          return undefined;
+        } else if (password !== repassword) {
+          alert('passwords did not match, please try again');
+          form.password.value = '';
+          form.repassword.value = '';
+          return undefined;
+        } else {
+          return password;
+        }
+      };
+
+      const pickPassword = async (e) => {
+        e.preventDefault();
+        const password = getPasswordValue();
+        if (password !== undefined) {
+          formSubmit.removeEventListener('click', pickPassword);
+          currentPassword = password;
+          await showDecrypted('');
+        }
+      };
+
+      const repickPassword = async (e) => {
+        e.preventDefault();
+        const password = getPasswordValue();
+        if (password !== undefined) {
+          setProperty('--display-save', 'inline');
+          formSubmit.removeEventListener('click', repickPassword);
+          currentPassword = password;
+          await showDecrypted();
+        }
+      };
+
+      const enterPassword = async (e) => {
+        e.preventDefault();
+        const password = form.password.value;
+        const decryptionResult = await decrypt(password, data);
+        if (!decryptionResult.success) {
+          alert('Incorrect password');
+          form.password.value = '';
+        } else {
+          const text = await decode(decryptionResult.data);
+          formSubmit.removeEventListener('click', enterPassword);
+          currentPassword = password;
+          showDecrypted(text);
+        }
+      };
+
+      changePasswordButton.addEventListener('click', async (_) => {
+        // reset pre-enterPassword changes
+        form.password.autocomplete = 'new-password';
+        form.password.placeholder = 'pick a password';
+        formSubmit.value = 'Create';
+
+        // set UI correclty
+        formSubmit.addEventListener('click', repickPassword);
         form.password.value = '';
         form.repassword.value = '';
-        return undefined;
-      } else {
-        return password;
-      }
-    };
-
-    const pickPassword = async (e) => {
-      e.preventDefault();
-      const password = getPasswordValue();
-      if (password !== undefined) {
-        formSubmit.removeEventListener('click', pickPassword);
-        currentPassword = password;
-        await showDecrypted('');
-      }
-    };
-
-    const repickPassword = async (e) => {
-      e.preventDefault();
-      const password = getPasswordValue();
-      if (password !== undefined) {
-        setProperty('--display-save', 'inline');
-        formSubmit.removeEventListener('click', repickPassword);
-        currentPassword = password;
-        await showDecrypted();
-      }
-    };
-
-    const enterPassword = async (e) => {
-      e.preventDefault();
-      const password = form.password.value;
-      const decryptionResult = await decrypt(password, data);
-      if (!decryptionResult.success) {
-        alert('Incorrect password');
-        form.password.value = '';
-      } else {
-        const text = await decode(decryptionResult.data);
-        formSubmit.removeEventListener('click', enterPassword);
-        currentPassword = password;
-        showDecrypted(text);
-      }
-    };
-
-    changePasswordButton.addEventListener('click', async (_) => {
-      // reset pre-enterPassword changes
-      form.password.autocomplete = 'new-password';
-      form.password.placeholder = 'pick a password';
-      formSubmit.value = 'Create';
-
-      // set UI correclty
-      formSubmit.addEventListener('click', repickPassword);
-      form.password.value = '';
-      form.repassword.value = '';
-      setProperty('--display-form', 'inline');
-      setProperty('--display-repw', 'inline');
-      setProperty('--display-main', 'none');
-      setProperty('--display-save', 'none');
-      form.password.focus();
-    });
-
-    saveButton.addEventListener('click', async (_) => {
-      await obtainFile(await encrypt(currentPassword, await encode(dataInput.value)), filename);
-
-      // reset saving functionality, user might continue use after save
-      setProperty('--display-save', 'none');
-      window.removeEventListener('beforeunload', preventUnload);
-      dataInput.addEventListener('input', activateSaveButton, { once: true });
-    });
-
-    emptyButton.addEventListener('click', async (_) => {
-      await obtainFile('', filename);
-    });
-
-    // this will be called again if password is changed
-    const showDecrypted = (decryptedData = undefined) => {
-      // show content, hide login
-      setProperty('--display-form', 'none');
-      setProperty('--display-repw', 'none');
-      setProperty('--display-main', 'inline');
-
-      if (decryptedData !== undefined) {
-        dataInput.value = decryptedData;
-      }
-      dataInput.removeEventListener('input', activateSaveButton, { once: true }); // remove if previous still exists
-      dataInput.addEventListener('input', activateSaveButton, { once: true });
-
-      // detect ctrl+s, save only if save button is shown
-      window.addEventListener('keydown', (event) => {
-        if (!(event.ctrlKey && event.key === 's')) return true;
-        if (document.documentElement.style.getPropertyValue('--display-save') === 'inline') {
-          saveButton.click();
-        }
-        event.preventDefault();
-        return false;
+        setProperty('--display-form', 'inline');
+        setProperty('--display-repw', 'inline');
+        setProperty('--display-main', 'none');
+        setProperty('--display-save', 'none');
+        form.password.focus();
       });
 
-      // focus if empty
-      if (decryptedData === '') {
-        dataInput.focus();
-      }
-    };
+      saveButton.addEventListener('click', async (_) => {
+        await obtainFile(await encrypt(currentPassword, await encode(dataInput.value)), filename);
 
-    if (dataEmpty()) {
-      setProperty('--display-repw', 'inline');
-      formSubmit.addEventListener('click', pickPassword);
-    } else {
-      form.password.autocomplete = 'current-password';
-      form.password.placeholder = 'enter password';
-      form.password.focus();
-      formSubmit.value = 'Open';
-      setProperty('--display-repw', 'none');
-      formSubmit.addEventListener('click', enterPassword);
-    };
-  });
+        // reset saving functionality, user might continue use after save
+        setProperty('--display-save', 'none');
+        window.removeEventListener('beforeunload', preventUnload);
+        dataInput.addEventListener('input', activateSaveButton, { once: true });
+      });
+
+      emptyButton.addEventListener('click', async (_) => {
+        await obtainFile('', filename);
+      });
+
+      // this will be called again if password is changed
+      const showDecrypted = (decryptedData = undefined) => {
+        // show content, hide login
+        setProperty('--display-form', 'none');
+        setProperty('--display-repw', 'none');
+        setProperty('--display-main', 'inline');
+
+        if (decryptedData !== undefined) {
+          dataInput.value = decryptedData;
+        }
+        dataInput.removeEventListener('input', activateSaveButton, { once: true }); // remove if previous still exists
+        dataInput.addEventListener('input', activateSaveButton, { once: true });
+
+        // detect ctrl+s, save only if save button is shown
+        window.addEventListener('keydown', (event) => {
+          if (!(event.ctrlKey && event.key === 's')) return true;
+          if (document.documentElement.style.getPropertyValue('--display-save') === 'inline') {
+            saveButton.click();
+          }
+          event.preventDefault();
+          return false;
+        });
+
+        // focus if empty
+        if (decryptedData === '') {
+          dataInput.focus();
+        }
+      };
+
+      if (dataEmpty()) {
+        setProperty('--display-repw', 'inline');
+        formSubmit.addEventListener('click', pickPassword);
+      } else {
+        form.password.autocomplete = 'current-password';
+        form.password.placeholder = 'enter password';
+        form.password.focus();
+        formSubmit.value = 'Open';
+        setProperty('--display-repw', 'none');
+        formSubmit.addEventListener('click', enterPassword);
+      };
+    });
+  }
+} catch (e) {
+  if (inBrowser()) alert(`error: ${e.message}\n\n${e.stack}`);
+  throw (e);
 }
 
 //</script></body></html>
