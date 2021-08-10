@@ -21,7 +21,7 @@ mainReplace('<!--HTML-->', mockPage.split('<!--HTML-->')[1]);
 
 // build the final file
 const fileContents = (
-`//<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body><script>
+`//classified.html requires JavaScript to work properly<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body><script>
 ${main}
 //</script></body></html>`);
 
