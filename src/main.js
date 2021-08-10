@@ -7,17 +7,17 @@ LICENCE
 const data = `
 `;// data end
 
+/*
+* Shared code and functions for all platforms
+*/
+
+const VERSION = '0.0.2';
+const inBrowser = () => typeof window !== 'undefined';
+const dataEmpty = () => data === '\n';
+const nodeVersionSupported = () => !(process.versions.node.split('.')[0] < 15);
+const browserSupported = () => window.crypto?.subtle !== undefined;
+
 try { // catch errors for displaying alerts if in browser
-  /*
-  * Shared code and functions for all platforms
-  */
-
-  const VERSION = '0.0.2';
-  const inBrowser = () => typeof window !== 'undefined';
-  const dataEmpty = () => data === '\n';
-  const nodeVersionSupported = () => !(process.versions.node.split('.')[0] < 15);
-  const browserSupported = () => window.crypto?.subtle !== undefined;
-
   // BASE64-JS
 
   // set global variables based on the execution environment
