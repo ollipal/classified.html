@@ -1,0 +1,4 @@
+[[redirects]]
+from = "/"
+to = "/classified.html"
+status = 200
