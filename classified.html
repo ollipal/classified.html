@@ -1,4 +1,4 @@
-//classified.html requires JavaScript to work properly<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body><script>
+//classified.html requires JavaScript to work properly. Try other browser or if on mobile visit classifiedhtml.com/new, set password, press save and then try adding to the home page<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body><script>
 /*
 classied.html
 
@@ -608,11 +608,11 @@ function fromByteArray (uint8) {
     /*
     Helper function to select a new password
     */
-    const pickPassword = async () => {
+    const choosePassword = async () => {
       let password, repassword;
       while (true) {
-        password = await prompt('pick a password: ');
-        repassword = await prompt('re-enter password: ');
+        password = await prompt('choose a password: ');
+        repassword = await prompt('re-enter the password: ');
         if (password === '') {
           console.log('cannot be empty');
           continue;
@@ -643,11 +643,11 @@ function fromByteArray (uint8) {
     };
 
     /*
-    Get or pick password and return existing decrypted data
+    Get or choose password and return existing decrypted data
     */
     const getPasswordAndData = async () => {
       if (dataEmpty()) {
-        return [await pickPassword(), ''];
+        return [await choosePassword(), ''];
       } else {
         return await decryptExistingData();
       }
@@ -873,7 +873,7 @@ function fromByteArray (uint8) {
     const changePassword = async () => {
       clearConsole();
       console.log('changing password:');
-      password = await pickPassword();
+      password = await choosePassword();
       changes = true;
       return 'password changed successfully';
     };
@@ -1191,7 +1191,7 @@ This licence file is also available at https://github.com/google/material-design
 <div id="form-div">
   <h2>classified.html</h2>
   <form id="form">
-    <input type="password" id="password" class="form-field" autocomplete="new-password" placeholder="pick a password">
+    <input type="password" id="password" class="form-field" autocomplete="new-password" placeholder="choose a password">
     <input type="password" id="repassword" class="form-field" autocomplete="new-password" placeholder="re-enter the password">
     <input type="submit" value="Create" id="form-submit">
   </form>
@@ -1709,22 +1709,22 @@ h2 {
         }
       };
 
-      const pickPassword = async (e) => {
+      const choosePassword = async (e) => {
         e.preventDefault();
         const password = getPasswordValue();
         if (password !== undefined) {
-          formSubmit.removeEventListener('click', pickPassword);
+          formSubmit.removeEventListener('click', choosePassword);
           currentPassword = password;
           await showDecrypted('');
         }
       };
 
-      const repickPassword = async (e) => {
+      const rechoosePassword = async (e) => {
         e.preventDefault();
         const password = getPasswordValue();
         if (password !== undefined) {
           setProperty('--display-save', 'inline');
-          formSubmit.removeEventListener('click', repickPassword);
+          formSubmit.removeEventListener('click', rechoosePassword);
           currentPassword = password;
           await showDecrypted();
         }
@@ -1746,13 +1746,12 @@ h2 {
       };
 
       changePasswordButton.addEventListener('click', async (_) => {
-        // reset pre-enterPassword changes
-        form.password.autocomplete = 'new-password';
-        form.password.placeholder = 'pick a password';
+        form.password.autocomplete = 'new-password'; // block autocompleting old password
+        form.password.placeholder = 'choose a password';
         formSubmit.value = 'Create';
 
         // set UI correclty
-        formSubmit.addEventListener('click', repickPassword);
+        formSubmit.addEventListener('click', rechoosePassword);
         form.password.value = '';
         form.repassword.value = '';
         setProperty('--display-form', 'inline');
@@ -1806,7 +1805,7 @@ h2 {
 
       if (dataEmpty()) {
         setProperty('--display-repw', 'inline');
-        formSubmit.addEventListener('click', pickPassword);
+        formSubmit.addEventListener('click', choosePassword);
       } else {
         form.password.autocomplete = 'current-password';
         form.password.placeholder = 'enter password';

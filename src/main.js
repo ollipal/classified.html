@@ -405,11 +405,11 @@ try { // catch errors for displaying alerts if in browser
     /*
     Helper function to select a new password
     */
-    const pickPassword = async () => {
+    const choosePassword = async () => {
       let password, repassword;
       while (true) {
-        password = await prompt('pick a password: ');
-        repassword = await prompt('re-enter password: ');
+        password = await prompt('choose a password: ');
+        repassword = await prompt('re-enter the password: ');
         if (password === '') {
           console.log('cannot be empty');
           continue;
@@ -440,11 +440,11 @@ try { // catch errors for displaying alerts if in browser
     };
 
     /*
-    Get or pick password and return existing decrypted data
+    Get or choose password and return existing decrypted data
     */
     const getPasswordAndData = async () => {
       if (dataEmpty()) {
-        return [await pickPassword(), ''];
+        return [await choosePassword(), ''];
       } else {
         return await decryptExistingData();
       }
@@ -670,7 +670,7 @@ try { // catch errors for displaying alerts if in browser
     const changePassword = async () => {
       clearConsole();
       console.log('changing password:');
-      password = await pickPassword();
+      password = await choosePassword();
       changes = true;
       return 'password changed successfully';
     };
@@ -894,22 +894,22 @@ try { // catch errors for displaying alerts if in browser
         }
       };
 
-      const pickPassword = async (e) => {
+      const choosePassword = async (e) => {
         e.preventDefault();
         const password = getPasswordValue();
         if (password !== undefined) {
-          formSubmit.removeEventListener('click', pickPassword);
+          formSubmit.removeEventListener('click', choosePassword);
           currentPassword = password;
           await showDecrypted('');
         }
       };
 
-      const repickPassword = async (e) => {
+      const rechoosePassword = async (e) => {
         e.preventDefault();
         const password = getPasswordValue();
         if (password !== undefined) {
           setProperty('--display-save', 'inline');
-          formSubmit.removeEventListener('click', repickPassword);
+          formSubmit.removeEventListener('click', rechoosePassword);
           currentPassword = password;
           await showDecrypted();
         }
@@ -931,13 +931,12 @@ try { // catch errors for displaying alerts if in browser
       };
 
       changePasswordButton.addEventListener('click', async (_) => {
-        // reset pre-enterPassword changes
-        form.password.autocomplete = 'new-password';
-        form.password.placeholder = 'pick a password';
+        form.password.autocomplete = 'new-password'; // block autocompleting old password
+        form.password.placeholder = 'choose a password';
         formSubmit.value = 'Create';
 
         // set UI correclty
-        formSubmit.addEventListener('click', repickPassword);
+        formSubmit.addEventListener('click', rechoosePassword);
         form.password.value = '';
         form.repassword.value = '';
         setProperty('--display-form', 'inline');
@@ -991,7 +990,7 @@ try { // catch errors for displaying alerts if in browser
 
       if (dataEmpty()) {
         setProperty('--display-repw', 'inline');
-        formSubmit.addEventListener('click', pickPassword);
+        formSubmit.addEventListener('click', choosePassword);
       } else {
         form.password.autocomplete = 'current-password';
         form.password.placeholder = 'enter password';
