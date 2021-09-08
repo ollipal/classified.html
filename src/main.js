@@ -255,35 +255,45 @@ try { // catch errors for displaying alerts if in browser
     const path = require('path');
     const filename = path.basename(__filename);
     const args = process.argv.slice(2);
-    const helpString = `classified.html version ${VERSION}
-  Open in browser or with Node.js by running 'node ${filename}'
+    const helpString = `
+classified.html version ${VERSION}
 
+Open in browser or with Node.js by running 'node ${filename}'
+Advanced usage: node ${filename} [COMMAND [TARGET [DATA...]]]
 
-  Advanced usage: node ${filename} [COMMAND [TARGET [DATA...]]]
+COMMANDS:
+  Data modifying commands:
+    add         add DATA to TARGET
+    modify      modify current TARGETs data
+    replace     replace existing data with DATA on TARGET
+    delete      delete TARGET and its data
+    show        show TARGET's data on the terminal
 
-  COMMANDS:
-    Data modifying commands:
-      add         add DATA to TARGET
-      modify      modify current TARGETs data
-      replace     replace existing data with DATA on TARGET
-      delete      delete TARGET and its data
-      show        show TARGET's data on the terminal
+  Other commands:
+    new         download empty classified.html. Will ask for save location if not specified in TARGET
+    help        show this help message
+    exit        save and exit, same as the default when the command is left empty
+    discard     discard changes, clear concole and quit, same as pressing ctrl+c
+    password    change password. Will ask the new one if not spesified in in TARGET
+    debug       put 'debug' before COMMAND to disable clearing the console
 
-    Other commands:
-      new         download empty classified.html. Will ask for save location if not specified in TARGET
-      help        show this help message
-      exit        save and exit, same as the default when the command is left empty
-      discard     discard changes, clear concole and quit, same as pressing ctrl+c
-      password    change password. Will ask the new one if not spesified in in TARGET
-      debug       put 'debug' before COMMAND to disable clearing the console
+TARGETS:
+  text          all of the text
+  row ID        row of text. ID can be a number or a start of the line, for example 'row 5' or 'row the'
 
-  TARGETS:
-    text          all of the text
-    row ID        row of text. ID can be a number or a start of the line, for example 'row 5' or 'row the'
+Example usage:
+  NOTE: all of these commands can be used after opening with 'node ${filename}' or
+  you can can pass them directly before giving password, for example: 'node ${filename} show row email'.
+  This will make the program exit automatically after the command has been executed.
 
-  Example usage:
-    add text This is classified.html    append 'This is classified.html' row to text
-    delete row 1                        delete the first row of text`;
+  add text This is classified.html    append 'This is classified.html' row to text
+  delete row 1                        delete the first row of text
+  add text email user password        appends 'email user password' row to text
+  show row email                      show row which starts with 'email'
+  delete row 2                        delete row number 2
+  modify row email                    modify row which starts with email
+  delete text                         deletes all text content
+`;
 
     // global variables to handle Node.js state
     let password, rows;
