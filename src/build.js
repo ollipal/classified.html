@@ -21,7 +21,7 @@ mainReplace('<!--HTML-->', mockPage.split('<!--HTML-->')[1]);
 
 // build the final file
 const fileContents = (
-`//classified.html requires JavaScript to work properly. Try other browser or if on mobile visit classifiedhtml.com/new, set password, press save and then try adding to the home page<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width'></head><body><script>
+`//classified.html requires JavaScript to work properly. Try other browser or if on mobile visit classifiedhtml.com/new, set password, press save and then try adding to the home page<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'></head><body><script>
 ${main}
 //</script></body></html>`);
 
