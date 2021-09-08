@@ -1,7 +1,7 @@
 # classified.html
 
 classified.html is a portable encryption solution with some unique features:
-- Everything is contained into a single .html file, including the data --> easy to backup, move and share
+- Everything is contained into a single .html file, including the data → easy to backup, move and share
 - For all major platforms: This single file can be accessed both from the browser and terminal with NodeJS (this means that `classified.html` is a legit HTML and JavaScript file at the same time!)
 
 Other features:
@@ -9,6 +9,8 @@ Other features:
 - No external dependencies, works fully offline
 - AES-GCM encryption with PBKDF2 password key derivation function which offers protection against brute forcing the password
 - Both PC and mobile browser support
+
+To start using: choose a password, write text and click save. This saves the text and the website encrypted into a single file, which can be accessed offline.
 
 To test this go to [online demo](https://classifiedhtml.com), download and open `classified.html` in browser or open with NodeJS by running `node classified.html`.
 
@@ -27,15 +29,17 @@ If you have any concerns, comments or improvements to the security side, I'm eag
 
 # Development
 
-Please create issues/PRs if you have any bugs or improvements to the current state. New features might not be accepted as this consept currently aims to be as simple as possible.
+Please create issues/PRs if you have any bugs reports or improvements to the current state. New features might not be accepted as this consept currently aims to be as simple as possible.
 
-`classified.html` is generated automatically by installing evrything with `npm ci`and then running `npm run build` **inside** src/ directory.
+`classified.html` is generated automatically by installing everything with `npm ci`and then running `npm run build` **inside** src/ directory.
 
-Other commands:  
+Other commands inside src/ directory:  
 `npm start`: execute in terminal with NodeJS  
 `npm run lint`: forces styling  
 `npm run precommit`: lint + build  
 `npm run all`: lint + build + start  
+
+For browser UI only changes, you can edit the `src/mockPage.html` directly, and open it on the browser to see the changes. Then when you are happy with the results you can use `npm run build` to get those changes included into `classified.html`, and test the changes with the full application.
 
 # Key learnings
 
