@@ -31,15 +31,7 @@ If you have any concerns, comments or improvements to the security side, I'm eag
 
 Please create issues/PRs if you have any bugs reports or improvements to the current state. New features might not be accepted as this consept currently aims to be as simple as possible.
 
-`classified.html` is generated automatically by installing everything with `npm ci`and then running `npm run build` **inside** src/ directory.
-
-Other commands inside src/ directory:  
-`npm start`: execute in terminal with NodeJS  
-`npm run lint`: forces styling  
-`npm run precommit`: lint + build  
-`npm run all`: lint + build + start  
-
-For browser UI only changes, you can edit the `src/mockPage.html` directly, and open it on the browser to see the changes. Then when you are happy with the results you can use `npm run build` to get those changes included into `classified.html`, and test the changes with the full application.
+`classified.html` is generated automatically by running npm scripts inside src/, more info at [src/DEVELOPMENT.md](./src/DEVELOPMENT.md)
 
 # Key learnings
 
@@ -47,6 +39,10 @@ For browser UI only changes, you can edit the `src/mockPage.html` directly, and 
     - built in base64 encode/decode on browsers and NodeJS did not seem to be compatible --> [base64-js](https://github.com/beatgammit/base64-js/blob/master/index.js) was included into source to make sure there are no compatibility issues with different platforms
     - Browser does not have a interface to return unmodified html source (`document.documentElement.innerHTML` does not work for example), which is required for saving --> as much as possible should be inside `<script>` tags, such as css 
 - iPhone Safari does not open individual .html files :(
+
+# Known bugs
+
+- Android Firefox scales text page wrong for some reason (also start page if rotated landsape and then portrait)
 
 # Credits
 base64js
