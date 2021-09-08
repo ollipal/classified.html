@@ -13,6 +13,7 @@
   --display-main: none;
   --display-save: none;
   --display-what: none;
+  --display-advanced: none;
   --inner-height: 100vh; /*temporary*/
   /*Theme*/
   --col-primary: #252525;
@@ -295,6 +296,25 @@ h2 {
   display: var(--display-what);
 }
 
+input[type='checkbox'] {
+  filter: grayscale(1);
+}
+
+#advanced-options-label {
+  color: var(--col-tertiary);
+  font-size: 0.75rem;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.advanced {
+  display: var(--display-advanced);
+}
+
+#advanced-options:checked ~ .advanced{
+  display: inline;
+}
+
 /*large screen*/
 @media only screen and (min-width: 1001px) {*
   #navbar {
@@ -444,6 +464,10 @@ h2 {
     <input type="password" id="password" class="form-field" autocomplete="new-password" placeholder="choose a password">
     <input type="password" id="repassword" class="form-field" autocomplete="new-password" placeholder="re-enter the password">
     <input type="submit" value="Create" id="form-submit">
+    <br><br><input type="checkbox" id="advanced-options" name="advanced-options">
+    <label for="advanced-options" id="advanced-options-label">show advanced options</label>
+    <br><br><label for="rounds" class="advanced">PBKDF2 rounds (SHA-512) <a href="https://en.wikipedia.org/wiki/PBKDF2" target="_blank">more info</a></label>
+    <input type="text" id="rounds" class="form-field advanced" name="rounds" value="100000">
   </form>
 </div>
 <div id=spacer></div>
