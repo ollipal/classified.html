@@ -13,7 +13,7 @@
   --display-main: none;
   --display-save: none;
   --display-what: none;
-  --display-advanced: none;
+  --display-advanced: inline;
   --inner-height: 100vh; /*temporary*/
   /*Theme*/
   --col-primary: #252525;
@@ -307,8 +307,12 @@ input[type='checkbox'] {
   vertical-align: middle;
 }
 
-.advanced {
+#advanced-options-div {
   display: var(--display-advanced);
+}
+
+.advanced {
+  display: none;
 }
 
 #advanced-options:checked ~ .advanced{
@@ -464,10 +468,12 @@ input[type='checkbox'] {
     <input type="password" id="password" class="form-field" autocomplete="new-password" placeholder="choose a password">
     <input type="password" id="repassword" class="form-field" autocomplete="new-password" placeholder="re-enter the password">
     <input type="submit" value="Create" id="form-submit">
-    <br><br><input type="checkbox" id="advanced-options" name="advanced-options">
-    <label for="advanced-options" id="advanced-options-label">show advanced options</label>
-    <br><br><label for="rounds" class="advanced">PBKDF2 rounds (SHA-512) <a href="https://en.wikipedia.org/wiki/PBKDF2" target="_blank">more info</a></label>
-    <input type="text" id="rounds" class="form-field advanced" name="rounds" value="100000">
+    <div id="advanced-options-div">
+      <br><br><input type="checkbox" id="advanced-options" name="advanced-options">
+      <label for="advanced-options" id="advanced-options-label" class="advanced">show advanced options</label>
+      <br><br><label for="iterations" class="advanced">PBKDF2 iterations (SHA-512) <a href="https://en.wikipedia.org/wiki/PBKDF2" target="_blank">?</a></label>
+      <input type="text" id="iterations" class="form-field advanced" name="iterations" value="${DEFAULT_PBKDF2_ITERATIONS}">
+    </div>
   </form>
 </div>
 <div id=spacer></div>
@@ -741,6 +747,7 @@ SVG-TERMS
           console.log("ok");
         }
         root.style.setProperty('--display-repw', "none");
+        root.style.setProperty('--display-advanced', "none");
         form.password.placeholder = 'enter password';
         formSubmit.value = 'Open';
       }else if (root.style.getPropertyValue('--display-repw') === "none"){

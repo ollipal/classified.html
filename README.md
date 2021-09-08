@@ -7,7 +7,7 @@ classified.html is a portable encryption solution with some unique features:
 Other features:
 - Uses efficient and well tested cryptographic implementations through [Web Crpyto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
 - No external dependencies, works fully offline
-- AES-GCM encryption with PBKDF2 password key derivation function which offers protection against brute forcing the password
+- 256-bit AES-GCM encryption with PBKDF2 password key derivation function offers protection against brute forcing the password
 - Both PC and mobile browser support
 
 To start using: choose a password, write text and click save. This saves the text and the website encrypted into a single file, which can be accessed offline.

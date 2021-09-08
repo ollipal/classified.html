@@ -33,6 +33,7 @@ const data = `
 */
 
 const VERSION = '0.0.2';
+DEFAULT_PBKDF2_ITERATIONS = 100000;
 const inBrowser = () => typeof window !== 'undefined';
 const dataEmpty = () => data === '\n';
 const nodeVersionSupported = () => !(process.versions.node.split('.')[0] < 15);
@@ -268,8 +269,8 @@ function fromByteArray (uint8) {
   /*
   Helper for storing user data in a recoverable way as a string
   */
-  const encryptionValuesToStrorableSring = (salt, iv, encrypted) => (
-    `salt:${salt.join('-')}\niv:${iv.join('-')}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}\n`
+  const encryptionValuesToStrorableSring = (salt, iv, iterations, encrypted) => (
+    `salt:${salt.join('-')}\niv:${iv.join('-')}\niterations:${iterations}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}\n`
   );
 
   /*
@@ -279,8 +280,9 @@ function fromByteArray (uint8) {
     const lines = str.split(/\r?\n|\r/g);
     const salt = new Uint8Array(lines[1].replace('salt:', '').split('-'));
     const iv = new Uint8Array(lines[2].replace('iv:', '').split('-'));
-    const data = lines.splice(4).join('');
-    return { salt, iv, data };
+    const iterations = parseInt(lines[3].replace('iterations:', ''));
+    const data = lines.splice(5).join('');
+    return { salt, iv, data, iterations };
   };
 
   /*
@@ -294,7 +296,7 @@ function fromByteArray (uint8) {
   First derive key material from password and salt,
   then use keymaterial and salt to derive an AES-GCM key using PBKDF2.
   */
-  const getKey = async (password, salt) => {
+  const getKey = async (password, salt, iterations) => {
     const keyMaterial = await subtle.importKey(
       'raw',
       utf8Encoder.encode(password),
@@ -306,8 +308,8 @@ function fromByteArray (uint8) {
     return subtle.deriveKey(
       {
         name: 'PBKDF2',
-        salt: salt,
-        iterations: 100000,
+        salt,
+        iterations,
         hash: 'SHA-512'
       },
       keyMaterial,
@@ -323,10 +325,10 @@ function fromByteArray (uint8) {
   Return a storable string that contains salt, initialization vector and the
   encrypted data encoded with base64.
   */
-  const encrypt = async (password, message) => {
+  const encrypt = async (password, message, iterations) => {
     const salt = getRandomValues(new Uint8Array(16));
     const iv = getRandomValues(new Uint8Array(12));
-    const key = await getKey(password, salt);
+    const key = await getKey(password, salt, iterations);
 
     const encrypted = await subtle.encrypt(
       {
@@ -337,7 +339,7 @@ function fromByteArray (uint8) {
       utf8Encoder.encode(placeholderData + message)
     );
 
-    return encryptionValuesToStrorableSring(salt, iv, encrypted);
+    return encryptionValuesToStrorableSring(salt, iv, iterations, encrypted);
   };
 
   /*
@@ -350,7 +352,7 @@ function fromByteArray (uint8) {
   */
   const decrypt = async (password, data) => {
     const parsedData = encryptionValuesFromStroredSring(data);
-    const key = await getKey(password, parsedData.salt);
+    const key = await getKey(password, parsedData.salt, parsedData.iterations);
 
     try {
       const decrypted = await subtle.decrypt(
@@ -363,10 +365,10 @@ function fromByteArray (uint8) {
       );
 
       const dec = new TextDecoder('utf-8', { fatal: true });
-      const message = dec.decode(decrypted).slice(placeholderData.length);
-      return { data: message, success: true };
+      const data = dec.decode(decrypted).slice(placeholderData.length);
+      return { success: true, data, iterations: parsedData.iterations };
     } catch (e) {
-      return { data: '', success: false };
+      return { success: false };
     }
   };
 
@@ -499,7 +501,7 @@ Example usage:
 `;
 
     // global variables to handle Node.js state
-    let password, rows;
+    let password, rows, iterations;
     let changes = false;
     let waitingForCommand = false;
     let readLineInterface;
@@ -649,7 +651,7 @@ Example usage:
         if (decryptionResult.success) break;
         console.log('incorrect password');
       }
-      return [password, await decode(decryptionResult.data)];
+      return [password, await decode(decryptionResult.data), decryptionResult.iterations];
     };
 
     /*
@@ -657,7 +659,7 @@ Example usage:
     */
     const getPasswordAndData = async () => {
       if (dataEmpty()) {
-        return [await choosePassword(), ''];
+        return [await choosePassword(), '', DEFAULT_PBKDF2_ITERATIONS]; // TODO allow choosing the iterations on cli
       } else {
         return await decryptExistingData();
       }
@@ -712,7 +714,7 @@ Example usage:
       if (dataEmpty() || changes) {
         // generate source
         const source = fs.readFileSync(__filename, 'utf8');
-        const updatedData = await encrypt(password, await encode(text));
+        const updatedData = await encrypt(password, await encode(text), iterations);
         const updatedSource = updateSourceData(source, updatedData);
 
         let triesLeft = 10;
@@ -957,7 +959,7 @@ Example usage:
 
       // select password, or decrypt data with the existing one
       let decryptedData;
-      [password, decryptedData] = await getPasswordAndData();
+      [password, decryptedData, iterations] = await getPasswordAndData();
       // initialize rows
       rows = decryptedData === '' ? [] : decryptedData.split('\n');
 
@@ -1204,6 +1206,12 @@ This licence file is also available at https://github.com/google/material-design
     <input type="password" id="password" class="form-field" autocomplete="new-password" placeholder="choose a password">
     <input type="password" id="repassword" class="form-field" autocomplete="new-password" placeholder="re-enter the password">
     <input type="submit" value="Create" id="form-submit">
+    <div id="advanced-options-div">
+      <br><br><input type="checkbox" id="advanced-options" name="advanced-options">
+      <label for="advanced-options" id="advanced-options-label" class="advanced">show advanced options</label>
+      <br><br><label for="iterations" class="advanced">PBKDF2 iterations (SHA-512) <a href="https://en.wikipedia.org/wiki/PBKDF2" target="_blank">?</a></label>
+      <input type="text" id="iterations" class="form-field advanced" name="iterations" value="${DEFAULT_PBKDF2_ITERATIONS}">
+    </div>
   </form>
 </div>
 <div id=spacer></div>
@@ -1255,6 +1263,7 @@ To start using: choose a password, write text and click save. This saves the tex
   --display-main: none;
   --display-save: none;
   --display-what: none;
+  --display-advanced: inline;
   --inner-height: 100vh; /*temporary*/
   /*Theme*/
   --col-primary: #252525;
@@ -1537,6 +1546,29 @@ h2 {
   display: var(--display-what);
 }
 
+input[type='checkbox'] {
+  filter: grayscale(1);
+}
+
+#advanced-options-label {
+  color: var(--col-tertiary);
+  font-size: 0.75rem;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+#advanced-options-div {
+  display: var(--display-advanced);
+}
+
+.advanced {
+  display: none;
+}
+
+#advanced-options:checked ~ .advanced{
+  display: inline;
+}
+
 /*large screen*/
 @media only screen and (min-width: 1001px) {*
   #navbar {
@@ -1686,6 +1718,7 @@ h2 {
       const emptyButton = document.getElementById('empty');
       const whatDiv = document.getElementById('what');
       const closeWhat = document.getElementById('close-popup');
+      const iterations = document.getElementById('iterations');
       let currentPassword; // this can change if the user changes password
 
       const setProperty = (key, value) => document.documentElement.style.setProperty(key, value);
@@ -1723,6 +1756,10 @@ h2 {
         tmpButton.remove();
       };
 
+      /*
+      Verfiy that the password values match and iterations field has a proper value.
+      If everything is ok, return the password.
+      */
       const getPasswordValue = () => {
         const password = form.password.value;
         const repassword = form.repassword.value;
@@ -1734,6 +1771,8 @@ h2 {
           form.password.value = '';
           form.repassword.value = '';
           return undefined;
+        } else if (isNaN(parseInt(iterations.value)) || parseInt(iterations.value) < 1) {
+          alert('Not a proper PBKDF2 iteration value');
         } else {
           return password;
         }
@@ -1795,7 +1834,7 @@ h2 {
       });
 
       saveButton.addEventListener('click', async (_) => {
-        await downloadFile(await encrypt(currentPassword, await encode(dataInput.value)), filename);
+        await downloadFile(await encrypt(currentPassword, await encode(dataInput.value), parseInt(iterations.value)), filename); // TODO get iterations.value from decryptionResult?
 
         // reset saving functionality, user might continue use after save
         setProperty('--display-save', 'none');
@@ -1845,6 +1884,7 @@ h2 {
         form.password.focus();
         formSubmit.value = 'Open';
         setProperty('--display-repw', 'none');
+        setProperty('--display-advanced', 'none');
         formSubmit.addEventListener('click', enterPassword);
       };
     });

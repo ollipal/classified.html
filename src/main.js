@@ -12,6 +12,7 @@ const data = `
 */
 
 const VERSION = '0.0.2';
+DEFAULT_PBKDF2_ITERATIONS = 100000;
 const inBrowser = () => typeof window !== 'undefined';
 const dataEmpty = () => data === '\n';
 const nodeVersionSupported = () => !(process.versions.node.split('.')[0] < 15);
@@ -65,8 +66,8 @@ try { // catch errors for displaying alerts if in browser
   /*
   Helper for storing user data in a recoverable way as a string
   */
-  const encryptionValuesToStrorableSring = (salt, iv, encrypted) => (
-    `salt:${salt.join('-')}\niv:${iv.join('-')}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}\n`
+  const encryptionValuesToStrorableSring = (salt, iv, iterations, encrypted) => (
+    `salt:${salt.join('-')}\niv:${iv.join('-')}\niterations:${iterations}\ndata:\n${toLines(arrayBufferToBase64(encrypted))}\n`
   );
 
   /*
@@ -76,8 +77,9 @@ try { // catch errors for displaying alerts if in browser
     const lines = str.split(/\r?\n|\r/g);
     const salt = new Uint8Array(lines[1].replace('salt:', '').split('-'));
     const iv = new Uint8Array(lines[2].replace('iv:', '').split('-'));
-    const data = lines.splice(4).join('');
-    return { salt, iv, data };
+    const iterations = parseInt(lines[3].replace('iterations:', ''));
+    const data = lines.splice(5).join('');
+    return { salt, iv, data, iterations };
   };
 
   /*
@@ -91,7 +93,7 @@ try { // catch errors for displaying alerts if in browser
   First derive key material from password and salt,
   then use keymaterial and salt to derive an AES-GCM key using PBKDF2.
   */
-  const getKey = async (password, salt) => {
+  const getKey = async (password, salt, iterations) => {
     const keyMaterial = await subtle.importKey(
       'raw',
       utf8Encoder.encode(password),
@@ -103,8 +105,8 @@ try { // catch errors for displaying alerts if in browser
     return subtle.deriveKey(
       {
         name: 'PBKDF2',
-        salt: salt,
-        iterations: 100000,
+        salt,
+        iterations,
         hash: 'SHA-512'
       },
       keyMaterial,
@@ -120,10 +122,10 @@ try { // catch errors for displaying alerts if in browser
   Return a storable string that contains salt, initialization vector and the
   encrypted data encoded with base64.
   */
-  const encrypt = async (password, message) => {
+  const encrypt = async (password, message, iterations) => {
     const salt = getRandomValues(new Uint8Array(16));
     const iv = getRandomValues(new Uint8Array(12));
-    const key = await getKey(password, salt);
+    const key = await getKey(password, salt, iterations);
 
     const encrypted = await subtle.encrypt(
       {
@@ -134,7 +136,7 @@ try { // catch errors for displaying alerts if in browser
       utf8Encoder.encode(placeholderData + message)
     );
 
-    return encryptionValuesToStrorableSring(salt, iv, encrypted);
+    return encryptionValuesToStrorableSring(salt, iv, iterations, encrypted);
   };
 
   /*
@@ -147,7 +149,7 @@ try { // catch errors for displaying alerts if in browser
   */
   const decrypt = async (password, data) => {
     const parsedData = encryptionValuesFromStroredSring(data);
-    const key = await getKey(password, parsedData.salt);
+    const key = await getKey(password, parsedData.salt, parsedData.iterations);
 
     try {
       const decrypted = await subtle.decrypt(
@@ -160,10 +162,10 @@ try { // catch errors for displaying alerts if in browser
       );
 
       const dec = new TextDecoder('utf-8', { fatal: true });
-      const message = dec.decode(decrypted).slice(placeholderData.length);
-      return { data: message, success: true };
+      const data = dec.decode(decrypted).slice(placeholderData.length);
+      return { success: true, data, iterations: parsedData.iterations };
     } catch (e) {
-      return { data: '', success: false };
+      return { success: false };
     }
   };
 
@@ -296,7 +298,7 @@ Example usage:
 `;
 
     // global variables to handle Node.js state
-    let password, rows;
+    let password, rows, iterations;
     let changes = false;
     let waitingForCommand = false;
     let readLineInterface;
@@ -446,7 +448,7 @@ Example usage:
         if (decryptionResult.success) break;
         console.log('incorrect password');
       }
-      return [password, await decode(decryptionResult.data)];
+      return [password, await decode(decryptionResult.data), decryptionResult.iterations];
     };
 
     /*
@@ -454,7 +456,7 @@ Example usage:
     */
     const getPasswordAndData = async () => {
       if (dataEmpty()) {
-        return [await choosePassword(), ''];
+        return [await choosePassword(), '', DEFAULT_PBKDF2_ITERATIONS]; // TODO allow choosing the iterations on cli
       } else {
         return await decryptExistingData();
       }
@@ -509,7 +511,7 @@ Example usage:
       if (dataEmpty() || changes) {
         // generate source
         const source = fs.readFileSync(__filename, 'utf8');
-        const updatedData = await encrypt(password, await encode(text));
+        const updatedData = await encrypt(password, await encode(text), iterations);
         const updatedSource = updateSourceData(source, updatedData);
 
         let triesLeft = 10;
@@ -754,7 +756,7 @@ Example usage:
 
       // select password, or decrypt data with the existing one
       let decryptedData;
-      [password, decryptedData] = await getPasswordAndData();
+      [password, decryptedData, iterations] = await getPasswordAndData();
       // initialize rows
       rows = decryptedData === '' ? [] : decryptedData.split('\n');
 
@@ -834,6 +836,7 @@ Example usage:
       const emptyButton = document.getElementById('empty');
       const whatDiv = document.getElementById('what');
       const closeWhat = document.getElementById('close-popup');
+      const iterations = document.getElementById('iterations');
       let currentPassword; // this can change if the user changes password
 
       const setProperty = (key, value) => document.documentElement.style.setProperty(key, value);
@@ -871,6 +874,10 @@ Example usage:
         tmpButton.remove();
       };
 
+      /*
+      Verfiy that the password values match and iterations field has a proper value.
+      If everything is ok, return the password.
+      */
       const getPasswordValue = () => {
         const password = form.password.value;
         const repassword = form.repassword.value;
@@ -882,6 +889,8 @@ Example usage:
           form.password.value = '';
           form.repassword.value = '';
           return undefined;
+        } else if (isNaN(parseInt(iterations.value)) || parseInt(iterations.value) < 1) {
+          alert('Not a proper PBKDF2 iteration value');
         } else {
           return password;
         }
@@ -943,7 +952,7 @@ Example usage:
       });
 
       saveButton.addEventListener('click', async (_) => {
-        await downloadFile(await encrypt(currentPassword, await encode(dataInput.value)), filename);
+        await downloadFile(await encrypt(currentPassword, await encode(dataInput.value), parseInt(iterations.value)), filename); // TODO get iterations.value from decryptionResult?
 
         // reset saving functionality, user might continue use after save
         setProperty('--display-save', 'none');
@@ -993,6 +1002,7 @@ Example usage:
         form.password.focus();
         formSubmit.value = 'Open';
         setProperty('--display-repw', 'none');
+        setProperty('--display-advanced', 'none');
         formSubmit.addEventListener('click', enterPassword);
       };
     });
