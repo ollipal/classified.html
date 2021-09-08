@@ -12,6 +12,7 @@
   --display-repw: inline;
   --display-main: none;
   --display-save: none;
+  --display-what: none;
   --inner-height: 100vh; /*temporary*/
   /*Theme*/
   --col-primary: #252525;
@@ -279,6 +280,21 @@ h2 {
   text-align:center;
 }
 
+#popup {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: calc(100vw - 3rem);
+  margin: 0.5rem;
+  padding: 1rem;
+  background-color: var(--col-secondary);
+  display: flex;
+  flex-direction: column;
+  white-space: pre-wrap;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.20), 0 6px 20px 0 rgba(0, 0, 0, 0.15);
+  display: var(--display-what);
+}
+
 /*large screen*/
 @media only screen and (min-width: 1001px) {*
   #navbar {
@@ -303,6 +319,12 @@ h2 {
 
   #navbar:hover .hide-when-not-main {
     display: var(--display-main) !important;
+  }
+
+  #popup {
+    width: calc(100vw - 30vw);
+    margin: 15vw;
+    padding: 1rem;
   }
 }
 
@@ -396,6 +418,11 @@ h2 {
   .hide-when-not-main {
     display: inline;
   }
+
+  #popup {
+    margin: 0.5rem;
+    padding: 1rem;
+  }
 }
 
 .hide-when-not-main {
@@ -426,7 +453,7 @@ h2 {
     <div id="nav-text-spacer"></div>
     <div class="nav-text" id="what">What is classified.html?</div>
     <div id="menu">
-      <!--Menu-svg-->
+      <!--menu-svg-->
       <svg height="32px" width="32px" viewBox="0 0 24 24" fill="none">
         <path d="M0 0h24v24H0V0z" fill="none"/>
         <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill="currentColor"/>
@@ -439,6 +466,18 @@ h2 {
 
   <div id="text-container">
       <textarea id="text" spellcheck="false" autocomplete="off" placeholder="type here..."></textarea>
+  </div>
+  <div id=popup><svg id="close-popup" height="24px" viewBox="0 0 24 24" width="24px" fill="None" style="margin-left: auto; width: 190%; cursor: pointer"><!--close-svg-->
+      <path d="M0 0h24v24H0V0z" fill="none"/>
+      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" fill="currentColor"/>
+    </svg>
+classified.html is a portable encryption solution with some unique features:
+- Everything is contained into a single .html file, including the data → easy to backup, move and share
+- For all major platforms: This single file can be accessed both from the browser and terminal with NodeJS
+
+More info at <a href="https://github.com/ollipal/classified.html" target="_blank">github.com/ollipal/classified.html</a>
+
+To start using: choose a password, write text and click save. This saves the text and the website encrypted into a single file, which can be accessed offline.
   </div>
 </div>
 
@@ -648,6 +687,8 @@ SVG-TERMS
     //root.style.setProperty('--display-main', "inline");
 
     const dataInput = document.getElementById('text');
+    const whatDiv = document.getElementById('what');
+    const closeWhat = document.getElementById('close-popup');
 
     /*
      * This handles automatically resizing textarea 
@@ -660,6 +701,9 @@ SVG-TERMS
     dataInput.addEventListener('input', resize);
     window.addEventListener('resize', resize);
     resize();
+
+    whatDiv.addEventListener("click", () => root.style.setProperty('--display-what', "inline"));
+    closeWhat.addEventListener("click", () => root.style.setProperty('--display-what', "none"));
 
     formSubmit.addEventListener("click", (e) => {
       e.preventDefault();

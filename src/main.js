@@ -822,6 +822,8 @@ try { // catch errors for displaying alerts if in browser
       const saveButton = document.getElementById('save');
       const changePasswordButton = document.getElementById('change');
       const emptyButton = document.getElementById('empty');
+      const whatDiv = document.getElementById('what');
+      const closeWhat = document.getElementById('close-popup');
       let currentPassword; // this can change if the user changes password
 
       const setProperty = (key, value) => document.documentElement.style.setProperty(key, value);
@@ -929,6 +931,9 @@ try { // catch errors for displaying alerts if in browser
           showDecrypted(text);
         }
       };
+
+      whatDiv.addEventListener('click', () => setProperty('--display-what', 'inline'));
+      closeWhat.addEventListener('click', () => setProperty('--display-what', 'none'));
 
       changePasswordButton.addEventListener('click', async (_) => {
         form.password.autocomplete = 'new-password'; // block autocompleting old password
