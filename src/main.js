@@ -850,34 +850,15 @@ try { // catch errors for displaying alerts if in browser
       window.addEventListener('resize', resize);
       resize();
 
-      const downloadFile = (file) => {
+      const downloadFile = async (data, name) => {
+        const fileContent = updateSourceData(source, data);
+        const file = new File([fileContent], name, { type: 'text/html' });
+
         const tmpButton = document.createElement('a');
         tmpButton.href = URL.createObjectURL(file);
         tmpButton.download = filename;
         tmpButton.click();
         tmpButton.remove();
-      };
-
-      const shareFile = async (file) => {
-        try {
-          await navigator.share({ files: [file], title: filename });
-        } catch (error) {
-          if (confirm(`Sharing failed: "${error.message}".\nDownload intead?`)) downloadFile(file);
-        }
-      };
-
-      /*
-      Download or share the file depending on the device used
-      */
-      const obtainFile = async (data, name) => {
-        const fileContent = updateSourceData(source, data);
-        const file = new File([fileContent], name, { type: 'text/html' });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await shareFile(file);
-        } else {
-          downloadFile(file);
-        }
       };
 
       const getPasswordValue = () => {
@@ -952,7 +933,7 @@ try { // catch errors for displaying alerts if in browser
       });
 
       saveButton.addEventListener('click', async (_) => {
-        await obtainFile(await encrypt(currentPassword, await encode(dataInput.value)), filename);
+        await downloadFile(await encrypt(currentPassword, await encode(dataInput.value)), filename);
 
         // reset saving functionality, user might continue use after save
         setProperty('--display-save', 'none');
@@ -961,7 +942,7 @@ try { // catch errors for displaying alerts if in browser
       });
 
       emptyButton.addEventListener('click', async (_) => {
-        await obtainFile('', filename);
+        await downloadFile('', filename);
       });
 
       // this will be called again if password is changed
