@@ -617,6 +617,7 @@ Example usage:
     };
 
     const addRow = (commandData) => {
+      changes = true;
       const [rowNumbers, command, errorString] = parseRowCommand(commandData);
       if (errorString !== undefined) return errorString;
       const rowNumber = rowNumbers[0];
@@ -626,6 +627,7 @@ Example usage:
     };
 
     const modifyRow = async (commandData) => {
+      changes = true;
       const [rowNumbers, errorString] = parseRow(commandData);
       if (errorString !== undefined) return errorString;
       const rowNumber = rowNumbers[0];
@@ -636,11 +638,13 @@ Example usage:
     };
 
     const deleteText = () => {
+      changes = true;
       rows = [];
       return 'text deleted';
     };
 
     const deleteRow = (commandData) => {
+      changes = true;
       const [rowNumbers, errorString] = parseRow(commandData);
       if (errorString !== undefined) return errorString;
       const rowNumber = rowNumbers[0];
@@ -650,11 +654,13 @@ Example usage:
     };
 
     const replaceText = (commandData) => {
+      changes = true;
       rows = [commandData];
       return 'text replaced';
     };
 
     const replaceRow = (commandData) => {
+      changes = true;
       const [rowNumbers, command, errorString] = parseRowCommand(commandData);
       if (errorString !== undefined) return errorString;
       const rowNumber = rowNumbers[0];
@@ -680,10 +686,10 @@ Example usage:
     };
 
     const changePassword = async () => {
+      changes = true;
       clearConsole();
       console.log('changing password:');
       password = await choosePassword();
-      changes = true;
       return 'password changed successfully';
     };
 
