@@ -954,7 +954,7 @@ Example usage:
         formSubmit.addEventListener('click', rechoosePassword);
         form.password.value = '';
         form.repassword.value = '';
-        setProperty('--display-form', 'inline');
+        setProperty('--display-form', 'inline-block');
         setProperty('--display-repw', 'inline');
         setProperty('--display-main', 'none');
         setProperty('--display-save', 'none');
