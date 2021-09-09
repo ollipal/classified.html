@@ -812,7 +812,7 @@ Example usage:
     /*
   SVG-TERMS
     */
-    const htmlTop = "//classified.html requires JavaScript to work properly. Try other browser or if on mobile visit classifiedhtml.com/new, set password, press save and then try adding to the home page<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'></head><body><script>";
+    const htmlTop = "//classified.html requires JavaScript to work properly. Try other browser or device.<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'></head><body><script>";
     const htmlBottom = '<\/script></body></html>';
     let filename;
     if (location.href === 'https://classifiedhtml.com/') { // hosted
