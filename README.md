@@ -23,8 +23,8 @@ Supported terminal commands can be found out by running `node classified.html --
 Note that these commands can be passed as commandline arguments, for example: `node classified.html show row mysecret`, or after opening the file `node classified.html` + `show row mysecret`.
 
 ## Security
-TLDR: this is mainly a consept which might have security issues and/or corrupt the data, for critical information I'd recommend [KeePass](https://keepass.info/) for proper offline encryption
-- If this consept is implemented properly, as far as I know the browser side should be quite secure if you assume that you dont have any malicious keylogging programs or browser extensions
+TLDR: this is mainly a concept which might have security issues and/or corrupt the data, for critical information I'd recommend [KeePass](https://keepass.info/) for proper offline encryption
+- If this concept is implemented properly, as far as I know the browser side should be quite secure if you assume that you dont have any malicious keylogging programs or browser extensions
 - When opened in terminal, the program attempts to clear all shown secrets after use, but this data might be accessible through some means on some platforms
 
 If you have any concerns, comments or improvements to the security side, I'm eager to hear them, please for example create new Issue or PR
@@ -43,7 +43,7 @@ If you have any concerns, comments or improvements to the security side, I'm eag
 
 ## Development
 
-Please create issues/PRs if you have any bugs reports or improvements to the current state. New features might not be accepted as this consept currently aims to be as simple as possible.
+Please create issues/PRs if you have any bugs reports or improvements to the current state. New features might not be accepted as this concept currently aims to be as simple as possible.
 
 `classified.html` is generated automatically by running npm scripts inside src/, more info at [src/DEVELOPMENT.md](./src/DEVELOPMENT.md)
 
