@@ -11,7 +11,7 @@ const data = `
 * Shared code and functions for all platforms
 */
 
-const VERSION = '0.0.2';
+const VERSION = '0.0.3';
 DEFAULT_PBKDF2_ITERATIONS = 100000;
 const inBrowser = () => typeof window !== 'undefined';
 const dataEmpty = () => data === '\n';

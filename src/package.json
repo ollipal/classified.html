@@ -1,6 +1,6 @@
 {
   "name": "classified.html",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "scripts": {
     "start": "node ../classified.html",
     "build": "node build.js",
