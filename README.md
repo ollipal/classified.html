@@ -4,6 +4,8 @@ classified.html is a portable encryption solution with some unique features:
 - Everything is contained into a single .html file, including the data → easy to backup, move and share
 - For all major platforms: This single file can be accessed both from the browser and terminal with NodeJS (this means that `classified.html` is a legit HTML and JavaScript file at the same time!)
 
+[![video demo](video.png)](https://www.youtube.com/watch?v=SuxDJEMPdAc "video demo")
+
 Other features:
 - Uses efficient and well tested cryptographic implementations through [Web Crpyto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
 - No external dependencies, works fully offline
